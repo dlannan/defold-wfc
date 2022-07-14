@@ -1,3 +1,11 @@
+
+function newArray( n, init )
+
+    local array = {}
+    for i=0, n-1 do array[i] = init end 
+    return array 
+end 
+
 function makeColor( r, g, b )
 
     local color = 0xff000000
@@ -10,6 +18,11 @@ function makeColor( r, g, b )
     return color
 end
 
+function tableMatch( p1, p2 )
+
+    for i=0, table.count(p1) do if p1[i] ~= p2[i] then return false end end
+    return true 
+end
 
 function ToPower(a, n)
     local product = 1
@@ -19,13 +32,16 @@ end
 
 function GetPixel( bitmap, x, y )
 
-    local idx = x * 4 + y * bitmap.Width * 4
-    return 
-    { 
-        r = string.byte(bitmap.data, idx + 1), 
-        g = string.byte(bitmap.data, idx + 2), 
-        b = string.byte(bitmap.data, idx + 3) 
-    }
+    -- local idx = x * 4 + y * bitmap.Width * 4
+    -- return 
+    -- { 
+    --     r = string.byte(bitmap.data, idx + 1), 
+    --     g = string.byte(bitmap.data, idx + 2), 
+    --     b = string.byte(bitmap.data, idx + 3) 
+    -- }
+
+    local r,g,b,a = libwfc.image_getpixel( bitmap.id, x, y )
+    return { r = r, g = g, b = b }
 end
 
 function Random(weights, r)

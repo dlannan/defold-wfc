@@ -13,17 +13,19 @@ OverlappingModel = {}
 OverlappingModel.new = function( name, N, width, height, periodicInput, periodic, symmetry, ground, heuristic )
 
     local tmodel = model_new( width, height, N, periodic, heuristic )
-    tmodel.colors   = {}
-    tmodel.patterns = {}
+
     tmodel.type     = "OverlappingModel"
+    tmodel.ground   = ground 
 
     pprint(name)
     
-    local bitmapId    = libwfc.image_load('samples/'..name..'.png')
+    local bitmapId  = libwfc.image_load('samples/'..name..'.png')
     local w, h, comp, data = libwfc.image_get(bitmapId)
-    local bitmap     = { Width = w, Height = h, Comp = comp, data = data }
-    local SX, SY    = bitmap.Width, bitmap.Height
-    local sample    = {}
+    local bitmap    = { id=bitmapId, Width = w, Height = h, Comp = comp, data = data }
+    local SX        = bitmap.Width
+    local SY        = bitmap.Height
+    local sample    = newArray( SX * SY,  0)
+    tmodel.colors   = {}
     
     for y = 0, SY-1 do 
         for x = 0, SX - 1 do 
@@ -31,20 +33,22 @@ OverlappingModel.new = function( name, N, width, height, periodicInput, periodic
 
             local i = 0
             for k,c in pairs(tmodel.colors) do 
-                if( c.r == color.r and c.b == color.b and c.g == color.g ) then break end 
+                if( (c.r == color.r) and (c.b == color.b) and (c.g == color.g) ) then break end 
                 i = i + 1
             end
 
-            if( i == table.count(tmodel.colors) ) then table.insert( tmodel.colors, color ) end
+            if( i == table.count(tmodel.colors) ) then 
+                table.insert(tmodel.colors, i, color) 
+            end
             sample[x + y * SX] = i;
         end 
     end
-    
+
     local C = table.count(tmodel.colors)
     local W = ToPower( C, tmodel.N * tmodel.N )
 
-    function pattern( func )
-        local result = {}
+    local function pattern( func )
+        local result = newArray( tmodel.N * tmodel.N, 0 )
         for y=0, tmodel.N-1 do
             for x = 0, tmodel.N-1 do 
                 result[x + y * tmodel.N] = func(x,y)
@@ -53,38 +57,40 @@ OverlappingModel.new = function( name, N, width, height, periodicInput, periodic
         return result
     end
 
-    function patternFromSample( x, y ) 
-        return pattern( function( dx, dy ) return sample[ (x+dx) % SX  + ((y + dy) % SY) * SX] end )
+    local function patternFromSample( bx, by ) 
+        return pattern( function( tx, ty ) return sample[ ((bx+tx) % SX) + ((by + ty) % SY) * SX ] end )
     end
-    function rotate( p ) 
-        return pattern( function(x,y) return p[tmodel.N - 1 -y + x * tmodel.N] end) 
+    local function rotate( p ) 
+        
+        return pattern( function(x,y) return p[tmodel.N - 1 - y + x * tmodel.N] end) 
     end
-    function reflect( p ) 
+    local function reflect( p ) 
         return pattern( function(x,y) return p[tmodel.N - 1 - x + y * tmodel.N] end) 
     end
 
-    function index( p )
+    local function index( p )
         local result = 0
         local power = 1 
-        for i = 0, table.count(p) - 1 do 
-            result = result + p[table.count(p) - 1 - i] * power 
+        local pcount = table.count(p)
+        for i = 0, pcount - 1 do 
+            result = result + p[pcount - 1 - i] * power 
             power = power * C 
         end
         return result
     end
 
-    function patternFromIndex( ind )
+    local function patternFromIndex( ind )
         local residue = ind 
         local power =  W 
-        local result = {}
+        local result = newArray( tmodel.N * tmodel.N, 0 )
         for i=0, tmodel.N * tmodel.N-1 do 
-            power = power / C 
+            power = math.floor(power / C) 
             local count = 0 
             while( residue >= power) do 
                 residue = residue - power 
                 count = count + 1
             end
-            result[i] = count       
+            result[i] = count   
         end
         return result
     end
@@ -92,13 +98,13 @@ OverlappingModel.new = function( name, N, width, height, periodicInput, periodic
     local Tweights = {} 
     local ordering = {} 
     local ycount = SY - tmodel.N + 1
-    if(periodicInput) then ycount = SY end 
+    if(periodicInput == true) then ycount = SY end 
     local xcount = SX - tmodel.N + 1
-    if(periodicInput) then xcount = SX end 
+    if(periodicInput == true) then xcount = SX end 
     for y = 0, ycount - 1 do 
         for x = 0, xcount - 1 do
 
-            local ps = { [0] = {}, [1] = {}, [2] = {}, [3] = {}, [4] = {}, [5] = {}, [6] = {}, [7] = {} } 
+            local ps = newArray( 8, {} )
             ps[0]   = patternFromSample(x, y)
             ps[1]   = reflect(ps[0])
             ps[2]   = rotate(ps[0])
@@ -122,10 +128,10 @@ OverlappingModel.new = function( name, N, width, height, periodicInput, periodic
 
     tmodel.T = table.count(Tweights)
     tmodel.ground = ground 
-    tmodel.patterns = {} 
-    tmodel.weights = {} 
+    tmodel.patterns = newArray( tmodel.T, {} )
+    tmodel.weights = newArray( tmodel.T + 1, 0.0 ) 
 
-    local counter = 0 
+    local counter = 0
     for k,w in ipairs(ordering) do 
         tmodel.patterns[counter] = patternFromIndex(w) 
         tmodel.weights[counter + 1] = Tweights[w]
@@ -134,23 +140,27 @@ OverlappingModel.new = function( name, N, width, height, periodicInput, periodic
 
     function agrees( p1, p2, dx, dy )
 
-        local xmin = math.max(dx, 0)
+        local xmin = dx
+        if(dx < 0) then xmin = 0 end 
         local xmax = tmodel.N
         if(dx < 0) then xmax = dx + tmodel.N end
-        local ymin = math.max(dy, 0)
+        local ymin = dy 
+        if(dy < 0) then ymin = 0 end
         local ymax = tmodel.N
         if(dy < 0) then ymax = dy + tmodel.N end
         for y = ymin, ymax-1 do 
             for x = xmin, xmax - 1 do 
-                if (p1[x + tmodel.N * y] ~= p2[x - dx + tmodel.N * (y - dy)]) then return false end
+                if ( p1[x + tmodel.N * y] ~= p2[x - dx + tmodel.N * (y - dy)] ) then 
+                    return false 
+                end
             end 
         end 
         return true
     end
 
-    tmodel.propagator = {} 
+    tmodel.propagator = newArray(4, {})
     for d = 0, 3 do 
-        tmodel.propagator[d] = {}
+        tmodel.propagator[d] = newArray( tmodel.T, {} )
         for t = 0, tmodel.T-1 do 
             local list = {} 
             for t2 = 0, tmodel.T-1 do 
@@ -166,7 +176,7 @@ OverlappingModel.new = function( name, N, width, height, periodicInput, periodic
     end 
 
     tmodel.GraphicsSave = function( self, filename )
-        local bdata, w, h, comp = OverlappingModel.Graphics(self) 
+        local bdata, w, h = OverlappingModel.Graphics(self) 
         --Write out data to filename 
         local count = libwfc.image_save( filename, w, h, bdata)
         assert(count == w * h, "[ IMAGE ERROR ] "..count.."  "..(w*h))
@@ -188,7 +198,7 @@ OverlappingModel.Graphics = function( tmodel )
             for x = 0, tmodel.MX-1 do
                 local dx = tmodel.N - 1
                 if x < tmodel.MX -tmodel.N + 1 then dx = 0 end 
-                local c = tmodel.colors[tmodel.patterns[tmodel.observed[x - dx + (y - dy) *tmodel.MX]][dx + dy *tmodel. N] + 1]
+                local c = tmodel.colors[tmodel.patterns[tmodel.observed[x - dx + (y - dy) *tmodel.MX]][dx + dy *tmodel. N]]
                 bitmapData[x + y * tmodel.MX] = makeColor( c.r, c.g, c.b )
             end
         end
@@ -197,24 +207,24 @@ OverlappingModel.Graphics = function( tmodel )
         for i = 0, table.count(tmodel.wave) - 1 do
             local contributors, r, g, b = 0, 0, 0, 0
             local x = i % tmodel.MX
-            local y = math.floor( i / tmodel.MX )
+            local y = math.floor( (i / tmodel.MX) )
 
             for dy = 0, tmodel.N-1 do 
                 for dx = 0, tmodel.N-1 do
                     local sx = x - dx
                     if (sx < 0) then sx = sx + tmodel.MX end
 
-                    sy = y - dy
+                    local sy = y - dy
                     if (sy < 0) then sy = sy + tmodel.MY end
 
                     local s = sx + sy * tmodel.MX
-                    if (tmodel.periodic == false and ((sx + tmodel.N > tmodel.MX) or (sy + tmodel.N > tmodel.MY) or (sx < 0 or sy < 0)) ) then 
-                        local q = 1
+                    if (tmodel.periodic == false and ((sx + tmodel.N > tmodel.MX) or (sy + tmodel.N > tmodel.MY) or (sx < 0) or (sy < 0)) ) then 
+                        
                     else
                         for t = 0, tmodel.T -1 do
-                            if (tmodel.wave[s][t]) then                        
+                            if (tmodel.wave[s][t] == true) then                        
                                 contributors = contributors + 1;
-                                local color = tmodel.colors[ tmodel.patterns[t][dx + dy * tmodel.N] + 1 ]
+                                local color = tmodel.colors[ tmodel.patterns[t][dx + dy * tmodel.N]]
                                 r = r + color.r
                                 g = g + color.g
                                 b = b + color.b
@@ -223,7 +233,7 @@ OverlappingModel.Graphics = function( tmodel )
                     end
                 end
             end
-            bitmapData[i] = makeColor( r/contributors, g/contributors, b/contributors )
+            bitmapData[i] = makeColor( math.floor(r/contributors), math.floor(g/contributors), math.floor(b/contributors) )
         end
     end
 

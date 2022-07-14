@@ -42,9 +42,9 @@ local model = {
     distribution    = {},
 
     sumsOfOnes      = {},
-    sumOfWeights    = 0,
-    sumOfWeightLogWeights = 0,
-    startingEntropy = 0,
+    sumOfWeights    = {},
+    sumOfWeightLogWeights = {},
+    startingEntropy = {},
 
     sumsOfWeights   = {},
     sumsOfWeightLogWeights = {},
@@ -61,27 +61,24 @@ model.heuristic     = Heuristic.entropy
 
 model.init = function( self )
 
-    self.wave = {} 
-    self.compatible = {} 
-    self.distribution = {}
-    self.observed = {}
+    self.wave = newArray( self.MX * self.MY, {} )
+    self.compatible = newArray( self.MX * self.MY, {} ) 
 
     for i = 0, self.MX * self.MY - 1 do 
-        self.wave[i] = {}
-        self.observed[i] = 0
+        self.wave[i] = newArray(self.T, false)
         self.compatible[i] = {}
         for t = 0, self.T - 1 do 
-            self.compatible[i][t] = { [0] = 0, [1] = 0, [2] = 0, [3] = 0 } 
-            self.wave[i][t] = false
+            self.compatible[i][t] = newArray(4, 0) 
         end
     end
+    self.distribution = newArray( self.T, 0.0 )
+    self.observed = newArray( self.MX * self.MY, 0 )
 
-    self.weightLogWeights = {}
+    self.weightLogWeights =  newArray( self.T, 0 )
     self.sumOfWeights = 0
     self.sumOfWeightLogWeights = 0 
 
     for t = 0, self.T-1 do
-        self.distribution[t] = 0.0 
         self.weightLogWeights[t] = self.weights[t+1] * math.log(self.weights[t+1])
         self.sumOfWeights = self.sumOfWeights + self.weights[t+1] 
         self.sumOfWeightLogWeights = self.sumOfWeightLogWeights + self.weightLogWeights[t]
@@ -89,18 +86,12 @@ model.init = function( self )
 
     self.startingEntropy = math.log( self.sumOfWeights ) - self.sumOfWeightLogWeights / self.sumOfWeights
 
-    self.sumsOfOnes = {} 
-    self.sumsOfWeights = {} 
-    self.sumsOfWeightLogWeights = {}
-    self.entropies = {}
+    self.sumsOfOnes = newArray( self.MX * self.MY, 0 )
+    self.sumsOfWeights = newArray( self.MX * self.MY, 0 ) 
+    self.sumsOfWeightLogWeights = newArray( self.MX * self.MY, 0 )
+    self.entropies = newArray( self.MX * self.MY, 0 )
 
-    -- for i = 0, self.MX * self.MY -1 do 
-    --     self.sumsOfWeights[i] = 0.0 
-    --     self.sumsOfWeightLogWeights[i] = 0.0
-    --     self.entropies[i] = 0.0
-    -- end
-
-    self.stack = {}
+    self.stack = newArray( self.MX * self.MY * self.T, {} )
     self.stacksize = 0
 end
 
@@ -110,8 +101,9 @@ model.run = function( self, seed, limit )
     self:clear()
     math.randomseed(seed)
 
-    local l = 0
-    while( l < limit-1 ) or ( limit < 0 ) do 
+    local rand = os.clock()
+
+    for l = 0, limit-1 do 
 
         local node = self:nextunobservednode( )
         if( node >= 0 ) then 
@@ -129,8 +121,6 @@ model.run = function( self, seed, limit )
             end 
             return true
         end 
-
-        l = l + 1
     end 
     return true
 end
@@ -139,8 +129,7 @@ model.nextunobservednode = function( self )
 
     if( self.heuristic == Heuristic.scanline ) then 
         for i = self.observedSoFar, table.count(self.wave) - 1 do 
-            if( self.periodic == false and (( (i % self.MX) + self.N > self.MX ) or ( math.floor((i / self.MX) + 0.4999) + self.N > self.MY )) ) then 
-                local blah = 1
+            if( self.periodic == false and (( (i % self.MX) + self.N > self.MX ) or ( math.floor(i / self.MX) + self.N > self.MY )) ) then 
             else
                 if( self.sumsOfOnes[i] > 1 ) then
                     self.observedSoFar = i + 1
@@ -151,18 +140,17 @@ model.nextunobservednode = function( self )
         return -1
     end
 
-    local min = 1e04
+    local min = 1e+04
     local argmin = -1
 
     for i=0, table.count(self.wave) -1 do 
-        if( self.periodic == false and (( i % self.MX + self.N > self.MX ) or ( math.floor((i / self.MX) + 0.49999) + self.N > self.MY))) then 
-            local blah = 1
+        if( self.periodic == false and (( (i % self.MX) + self.N > self.MX ) or ( math.floor(i / self.MX) + self.N > self.MY))) then 
         else 
             local remainingValues = self.sumsOfOnes[i]
             local entropy = remainingValues
             if( self.heuristic == Heuristic.entropy ) then entropy = self.entropies[i] end
 
-            if(remainingValues > 1) and (entropy <= min) then 
+            if((remainingValues > 1) and (entropy <= min)) then 
                 local noise = 1e-06 * math.random()
                 if(entropy + noise < min) then 
 
@@ -181,9 +169,9 @@ model.observe = function( self, node )
     local w = self.wave[node]
     for t = 0, self.T-1 do 
         self.distribution[t] = 0.0 
-        if( w[t] ) then self.distribution[t] = self.weights[t+1] end
+        if( w[t] == true ) then self.distribution[t] = self.weights[t+1] end
     end 
-    local r = Random(self.distribution, math.random() )
+    local r = Random( self.distribution, math.random() )
     for t=0, self.T-1 do 
         if( w[t] ~= ( t == r )) then 
             self:ban( node, t ) 
@@ -200,15 +188,14 @@ model.propagate = function( self )
         self.stacksize = self.stacksize - 1
 
         local x1 = i1 % self.MX
-        local y1 = math.floor( (i1 / self.MX) + 0.49999) 
+        local y1 = math.floor( (i1 / self.MX)) 
 
         for d=0, 3 do 
 
             local x2 = x1 + dx[d+1]
             local y2 = y1 + dy[d+1]
 
-            if( self.periodic == false and (x2 < 0 or y2 < 0 or x2 + self.N > self.MX or y2 + self.N > self.MY)) then 
-                local blah = 1
+            if( self.periodic == false and ((x2 < 0) or (y2 < 0) or (x2 + self.N > self.MX) or (y2 + self.N > self.MY) )) then 
             else
                 if(x2 < 0) then x2 = x2 + self.MX 
                 elseif( x2 >= self.MX ) then x2 = x2 - self.MX end
@@ -221,18 +208,18 @@ model.propagate = function( self )
                 for l, v in pairs(p) do
                     local comp = compat[v]
                     comp[d] = comp[d] - 1 
-                    if(comp[d] == 0 ) then self:ban( i2, l ) end 
+                    if(comp[d] == 0 ) then self:ban( i2, v ) end 
                 end
             end
         end
     end
-    return self.sumsOfOnes[0] > 0
+    return (self.sumsOfOnes[0] > 0)
 end
 
 model.ban = function ( self, i, t )
     self.wave[i][t] = false 
+
     local comp = self.compatible[i][t]
-    if(comp == nil) then pprint(i,t, self.T) end
     for d = 0, 3 do comp[d] = 0 end 
     self.stack[self.stacksize] = { i, t }
     self.stacksize = self.stacksize + 1
@@ -263,7 +250,7 @@ model.clear = function( self )
     end
 
     self.observedSoFar = 0 
-    if( self.ground ) then 
+    if( self.ground == true ) then 
         for x=0, self.MX-1 do 
             for t = 0, self.T - 2 do self:ban( x + (self.MY - 1) * self.MX , t ) end 
             for y = 0, self.MY - 2 do self:ban( x + y * self.MX, self.T - 1) end 

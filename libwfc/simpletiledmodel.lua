@@ -25,8 +25,8 @@ SimpleTiledModel.new = function( name, subsetName, width, height, periodic, blac
     tmodel.blackBackground     = false
 
     local xroot = xdocument:loadFile( "samples/"..name.."/data.xml"):children()[1]
-    tmodel.tilesize = xroot:properties()["size"] or 16 
-    local unique = xroot:properties()["unique"] or false
+    tmodel.tilesize = tonumber(xroot:properties()["size"] or 16) 
+    local unique = string.lower(xroot:properties()["unique"] or "false") == "true"
 
     local subset = nil
     if(subsetName) then 
@@ -51,7 +51,7 @@ SimpleTiledModel.new = function( name, subsetName, width, height, periodic, blac
     end
     
     local function tile( func )
-        local result = {}
+        local result = newArray( tmodel.tilesize * tmodel.tilesize, {r=0, g=0, b=0} )
         for y=0, tmodel.tilesize-1 do 
             for x =0, tmodel.tilesize-1 do 
                 result[ x + y * tmodel.tilesize] = func(x,y) 
@@ -131,13 +131,13 @@ SimpleTiledModel.new = function( name, subsetName, width, height, periodic, blac
                     table.insert(action, map[t])
                 end 
 
-                if(unique) then 
+                if(unique == true) then 
 
                     for t = 0, cardinality - 1 do 
                         -- pprint("samples/" .. name.."/"..tilename.." "..t..".png")
                         local bitmapId    = libwfc.image_load("samples/" .. name.."/"..tilename.." "..t..".png")
                         local w, h, comp, data = libwfc.image_get(bitmapId)
-                        local bitmap     = { Width = w, Height = h, Comp = comp, data = data }
+                        local bitmap     = { id=bitmapId, Width = w, Height = h, Comp = comp, data = data }
                         
                         local tdata  = tile( function(x,y) return GetPixel(bitmap, x, y) end )
                         table.insert(tmodel.tiles, tdata)
@@ -146,7 +146,7 @@ SimpleTiledModel.new = function( name, subsetName, width, height, periodic, blac
                 else 
                     local bitmapId    = libwfc.image_load( "samples/" .. name.."/"..tilename..".png" )
                     local w, h, comp, data = libwfc.image_get(bitmapId)
-                    local bitmap     = { Width = w, Height = h, Comp = comp, data = data }
+                    local bitmap     = { id=bitmapId, Width = w, Height = h, Comp = comp, data = data }
                     
                     local tdata = tile( function(x,y) return GetPixel(bitmap, x, y) end )
                     table.insert(tmodel.tiles, tdata)
@@ -167,6 +167,7 @@ SimpleTiledModel.new = function( name, subsetName, width, height, periodic, blac
     end)
 
     assert(table.count(action) > 0, "No actions? :"..table.count(action))
+    pprint("[WEIGHTLIST]"..table.count(weightList))
     tmodel.T = table.count(action)
     tmodel.weights = weightList
 

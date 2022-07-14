@@ -3,7 +3,6 @@ require("libwfc.utils")
 require("libwfc.xmlsimple")
 local xdocument  = newParser()
 
-local model = require("libwfc.model")
 local SimpleTiledModel  = require("libwfc.simpletiledmodel")
 local OverlappingModel  = require("libwfc.overlappingmodel")
 
@@ -24,8 +23,8 @@ local function runModel( model, e )
     print("Screenshots: "..screenshots)
     for i = 0, screenshots-1 do
         for k = 0, 9 do
-            io.write("> ")
-            local seed      = os.clock()
+            io.write("> ");io.flush()
+            local seed      = math.floor(os.clock() * 1000000)
             local limit     = tonumber(e.props["limit"]) or -1
             local success   = model:run(seed, limit)
 
@@ -37,8 +36,8 @@ local function runModel( model, e )
                     if( e.props["textOutput"] == "True" ) then  
                         print( model:TextOutput() )
                     end 
-                    break
                 end
+                break
             else 
                 io.write("CONTRADICTION\n")
                 io.flush()
@@ -48,14 +47,14 @@ local function runModel( model, e )
 end 
 
 -- Check the properties of an element
-local function checkProps( e, overlapping )
+program.checkProps = function( e, overlapping )
 
     local dim = 24
     if(overlapping) then dim = 48 end
 
-    local size  = tonumber(e.props[ "size" ]) or dim
-    local width = tonumber(e.props[ "width" ]) or size
-    local height = tonumber(e.props[ "height" ]) or size
+    local size  = tonumber(e.props[ "size" ] or dim) 
+    local width = tonumber(e.props[ "width" ] or size) 
+    local height = tonumber(e.props[ "height" ] or size)
     local periodic = (string.lower(e.props[ "periodic" ] or "false") == "true")
     local heuristicString  = e.props[ "heuristic" ]
 
@@ -68,10 +67,10 @@ local function checkProps( e, overlapping )
 
     local model = nil
     if( overlapping ) then 
-        local N = tonumber(e.props["N"]) or 3 
+        local N = tonumber(e.props["N"] or 3)  
         local periodicInput = (string.lower(e.props["periodicInput"] or "true") == "true") 
-        local symmetry = tonumber(e.props["symmetry"]) or 8 
-        local ground = e.props["ground"] or false
+        local symmetry = tonumber(e.props["symmetry"] or 8) 
+        local ground = string.lower(e.props["ground"] or "false") == "true"
         model = OverlappingModel.new( e.props["name"], N, width, height, periodicInput, periodic, symmetry, ground, heuristic )
     else 
         local subset = e.props["subset"]
@@ -79,7 +78,7 @@ local function checkProps( e, overlapping )
         model = SimpleTiledModel.new( e.props["name"], subset, width, height, periodic, blackBackground, heuristic )
     end
 
-    runModel(model, e)
+    runModel(model,  e)
 end
 
 program.main = function()
@@ -87,21 +86,21 @@ program.main = function()
     -- program.sw = timer.delay( 0.2, true, function() 
     --     -- Timer update
     -- end)
+    program.runQ = {}
 
-    math.randomseed( os.clock() )
+    os.execute( "rm -f output/*")
 
     local xdoc = xdocument:loadFile( "main/samples.xml" )
     for k,v in pairs( xdoc:children() ) do
         print(k,v:name())
 
         local overlapping = xmlElementFilter( v, "overlapping", function(e)
-            checkProps( e, true )
-            print("----")
+            table.insert( program.runQ, { e=e, overlap=true } )
         end)
 
         local simpletiled = xmlElementFilter( v, "simpletiled" , function(e)
 
-            checkProps( e, false )
+            table.insert( program.runQ, { e=e, overlap=false } )
         end)
     end
 end

@@ -148,7 +148,7 @@ static int libwfc_ImageGet( lua_State *L )
             lua_pushinteger(L, images[id].w);
             lua_pushinteger(L, images[id].h);
             lua_pushinteger(L, 4);
-            lua_pushlstring(L, (char *)images[id].data, images[id].w * images[id].h * images[id].comp );
+            lua_pushlstring(L, (char *)images[id].data, images[id].w * images[id].h * 4 );
             return 4;
         }
         else 
@@ -156,6 +156,25 @@ static int libwfc_ImageGet( lua_State *L )
     }
     else 
         lua_pushnil(L);
+    return 1;
+}
+
+static int libwfc_ImageGetPixel( lua_State *L )
+{
+    int id  = luaL_checkinteger(L, 1);
+    int x   = luaL_checkinteger(L, 2);
+    int y   = luaL_checkinteger(L, 3);
+    if(id>=0 && id <images.size())
+    {
+        if(images[id].tid >= 0) {
+            lua_pushinteger(L, images[id].data[x * 4 + y * images[id].w * 4]);
+            lua_pushinteger(L, images[id].data[x * 4 + y * images[id].w * 4 + 1]);
+            lua_pushinteger(L, images[id].data[x * 4 + y * images[id].w * 4 + 2]);
+            lua_pushinteger(L, images[id].data[x * 4 + y * images[id].w * 4 + 3]);
+            return 4;
+         }
+    }
+    lua_pushnil(L);
     return 1;
 }
 
@@ -204,6 +223,7 @@ static const luaL_reg Module_methods[] =
     {"image_get", libwfc_ImageGet},
     {"image_save", libwfc_ImageSave},
     {"image_free", libwfc_ImageFree},
+    {"image_getpixel", libwfc_ImageGetPixel},
 
     {0, 0}
 };
