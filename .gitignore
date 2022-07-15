@@ -5,6 +5,7 @@
 Thumbs.db
 .lock-wscript
 *.pyc
+/output/*.png
 .project
 .cproject
 builtins
