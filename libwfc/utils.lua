@@ -9,12 +9,12 @@ end
 function makeColor( r, g, b )
 
     local color = 0xff000000
-    local shR = bit.lshift(b, 16)
+    local shB = bit.lshift(b, 16)
     local shG = bit.lshift(g, 8)
 
     color = bit.bor(color, r )
     color = bit.bor(color, shG)
-    color = bit.bor(color, shR)
+    color = bit.bor(color, shB)
     return color
 end
 

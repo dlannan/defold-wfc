@@ -25,8 +25,9 @@ SimpleTiledModel.new = function( name, subsetName, width, height, periodic, blac
     tmodel.blackBackground     = false
 
     local xroot = xdocument:loadFile( "samples/"..name.."/data.xml"):children()[1]
-    tmodel.tilesize = tonumber(xroot:properties()["size"] or 16) 
-    local unique = string.lower(xroot:properties()["unique"] or "false") == "true"
+    local sprops = xroot:properties()
+    tmodel.tilesize = tonumber(sprops["size"] or 16) 
+    local unique = string.lower(sprops["unique"] or "false") == "true"
 
     local subset = nil
     if(subsetName) then 
@@ -296,6 +297,7 @@ SimpleTiledModel.Graphics = function(tmodel)
     if (tmodel.observed[0] >= 0) then
         for x = 0, tmodel.MX-1 do 
             for y = 0, tmodel.MY-1 do
+                pprint(tmodel.observed[x + y * tmodel.MX].." "..x.."  "..y)
                 local tile = tmodel.tiles[tmodel.observed[x + y * tmodel.MX]+1]
                 for yt = 0, tmodel.tilesize-1 do 
                     for xt = 0, tmodel.tilesize-1 do

@@ -1,2 +1,11 @@
 # C++ symbol in your extension
 name: "LibWfc"
+
+platforms:
+    x86-win32:
+        context:
+            defines: ["STBI_NO_SIMD"]
+
+    x86_64-win32:
+        context:
+            defines: ["STBI_NO_SIMD"]

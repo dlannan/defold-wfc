@@ -14,11 +14,11 @@ function deepcopy(orig)
     return copy
 end
 
-dx = { -1, 0, 1, 0 }
-dy = { 0, 1, 0, -1 }
-opposite = { 2, 3, 0, 1 }
-
 local model = {
+
+    Gdx = { -1, 0, 1, 0 },
+    Gdy = { 0, 1, 0, -1 },
+    Gopposite = { 2, 3, 0, 1 },    
 
     wave            = {},
     propagator      = {},
@@ -103,7 +103,8 @@ model.run = function( self, seed, limit )
 
     local rand = os.clock()
 
-    for l = 0, limit-1 do 
+    local l = 0
+    while( (l < limit) or( limit < 0) ) do
 
         local node = self:nextunobservednode( )
         if( node >= 0 ) then 
@@ -121,6 +122,7 @@ model.run = function( self, seed, limit )
             end 
             return true
         end 
+        l=l+1
     end 
     return true
 end
@@ -140,7 +142,7 @@ model.nextunobservednode = function( self )
         return -1
     end
 
-    local min = 1e+04
+    local min = 1e+4
     local argmin = -1
 
     for i=0, table.count(self.wave) -1 do 
@@ -151,7 +153,7 @@ model.nextunobservednode = function( self )
             if( self.heuristic == Heuristic.entropy ) then entropy = self.entropies[i] end
 
             if((remainingValues > 1) and (entropy <= min)) then 
-                local noise = 1e-06 * math.random()
+                local noise = 1e-6 * math.random()
                 if(entropy + noise < min) then 
 
                     min = entropy + noise
@@ -172,6 +174,7 @@ model.observe = function( self, node )
         if( w[t] == true ) then self.distribution[t] = self.weights[t+1] end
     end 
     local r = Random( self.distribution, math.random() )
+    print(r)
     for t=0, self.T-1 do 
         if( w[t] ~= ( t == r )) then 
             self:ban( node, t ) 
@@ -188,14 +191,15 @@ model.propagate = function( self )
         self.stacksize = self.stacksize - 1
 
         local x1 = i1 % self.MX
-        local y1 = math.floor( (i1 / self.MX)) 
+        local y1 = math.floor( (i1 / self.MX) ) 
 
         for d=0, 3 do 
 
-            local x2 = x1 + dx[d+1]
-            local y2 = y1 + dy[d+1]
+            local x2 = x1 + self.Gdx[d+1]
+            local y2 = y1 + self.Gdy[d+1]
 
             if( self.periodic == false and ((x2 < 0) or (y2 < 0) or (x2 + self.N > self.MX) or (y2 + self.N > self.MY) )) then 
+
             else
                 if(x2 < 0) then x2 = x2 + self.MX 
                 elseif( x2 >= self.MX ) then x2 = x2 - self.MX end
@@ -217,6 +221,7 @@ model.propagate = function( self )
 end
 
 model.ban = function ( self, i, t )
+
     self.wave[i][t] = false 
 
     local comp = self.compatible[i][t]
@@ -238,7 +243,7 @@ model.clear = function( self )
         for t = 0, self.T -1 do 
             self.wave[i][t] = true 
             for d = 0, 3 do 
-                self.compatible[i][t][d] = table.count(self.propagator[opposite[d+1]][t])
+                self.compatible[i][t][d] = table.count(self.propagator[self.Gopposite[d+1]][t])
             end 
         end 
 

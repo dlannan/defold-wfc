@@ -84,7 +84,7 @@ OverlappingModel.new = function( name, N, width, height, periodicInput, periodic
         local power =  W 
         local result = newArray( tmodel.N * tmodel.N, 0 )
         for i=0, tmodel.N * tmodel.N-1 do 
-            power = math.floor(power / C) 
+            power = math.floor( power / C ) 
             local count = 0 
             while( residue >= power) do 
                 residue = residue - power 
@@ -164,7 +164,7 @@ OverlappingModel.new = function( name, N, width, height, periodicInput, periodic
         for t = 0, tmodel.T-1 do 
             local list = {} 
             for t2 = 0, tmodel.T-1 do 
-                if( agrees( tmodel.patterns[t], tmodel.patterns[t2], dx[d+1], dy[d+1]) == true ) then 
+                if( agrees( tmodel.patterns[t], tmodel.patterns[t2], tmodel.Gdx[d+1], tmodel.Gdy[d+1]) == true ) then 
                     table.insert(list, t2) 
                 end
             end
@@ -198,7 +198,7 @@ OverlappingModel.Graphics = function( tmodel )
             for x = 0, tmodel.MX-1 do
                 local dx = tmodel.N - 1
                 if x < tmodel.MX -tmodel.N + 1 then dx = 0 end 
-                local c = tmodel.colors[tmodel.patterns[tmodel.observed[x - dx + (y - dy) *tmodel.MX]][dx + dy *tmodel. N]]
+                local c = tmodel.colors[tmodel.patterns[tmodel.observed[x - dx + (y - dy) *tmodel.MX]][dx + dy *tmodel.N]]
                 bitmapData[x + y * tmodel.MX] = makeColor( c.r, c.g, c.b )
             end
         end

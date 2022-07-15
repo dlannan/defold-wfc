@@ -87,8 +87,15 @@ program.main = function()
     --     -- Timer update
     -- end)
     program.runQ = {}
+    local info = sys.get_sys_info()
+    -- The system OS name: "Darwin", "Linux", "Windows", "HTML5", "Android" or "iPhone OS"
+    if info.system_name == "Linux" or info.system_name == "Darwin" then
+        os.execute( "rm -f output/*.png")
+    end 
 
-    os.execute( "rm -f output/*")
+    if info.system_name == "Windows" then
+        os.execute( "del output\\*.png")
+    end
 
     local xdoc = xdocument:loadFile( "main/samples.xml" )
     for k,v in pairs( xdoc:children() ) do
