@@ -101,8 +101,6 @@ model.run = function( self, seed, limit )
     self:clear()
     math.randomseed(seed)
 
-    local rand = os.clock()
-
     local l = 0
     while( (l < limit) or( limit < 0) ) do
 
@@ -142,9 +140,10 @@ model.nextunobservednode = function( self )
         return -1
     end
 
-    local min = 1e+4
+    local min = 1E+4
     local argmin = -1
 
+    -- PROBLEMS IN HERE!!!
     for i=0, table.count(self.wave) -1 do 
         if( self.periodic == false and (( (i % self.MX) + self.N > self.MX ) or ( math.floor(i / self.MX) + self.N > self.MY))) then 
         else 
@@ -153,7 +152,7 @@ model.nextunobservednode = function( self )
             if( self.heuristic == Heuristic.entropy ) then entropy = self.entropies[i] end
 
             if((remainingValues > 1) and (entropy <= min)) then 
-                local noise = 1e-6 * math.random()
+                local noise = 1E-6 * math.random()
                 if(entropy + noise < min) then 
 
                     min = entropy + noise
