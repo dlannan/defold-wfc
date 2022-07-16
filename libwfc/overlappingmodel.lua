@@ -38,7 +38,7 @@ OverlappingModel.new = function( name, N, width, height, periodicInput, periodic
             end
 
             if( i == table.count(tmodel.colors) ) then 
-                table.insert(tmodel.colors, i, color) 
+                tmodel.colors[i] = color 
             end
             sample[x + y * SX] = i;
         end 
@@ -120,7 +120,8 @@ OverlappingModel.new = function( name, N, width, height, periodicInput, periodic
                     Tweights[ind] = Tweights[ind] + 1
                 else 
                     Tweights[ind] = 1
-                    table.insert(ordering, ind) 
+                    local last = table.count(ordering)
+                    ordering[last] = ind
                 end 
             end 
         end
@@ -129,12 +130,13 @@ OverlappingModel.new = function( name, N, width, height, periodicInput, periodic
     tmodel.T = table.count(Tweights)
     tmodel.ground = ground 
     tmodel.patterns = newArray( tmodel.T, {} )
-    tmodel.weights = newArray( tmodel.T + 1, 0.0 ) 
+    tmodel.weights = newArray( tmodel.T, 0.0 ) 
 
     local counter = 0
-    for k,w in ipairs(ordering) do 
+    for i = 0, table.count(ordering)-1 do
+        local w = ordering[i] 
         tmodel.patterns[counter] = patternFromIndex(w) 
-        tmodel.weights[counter + 1] = Tweights[w]
+        tmodel.weights[counter] = Tweights[w]
         counter = counter + 1
     end
 
@@ -165,12 +167,13 @@ OverlappingModel.new = function( name, N, width, height, periodicInput, periodic
             local list = {} 
             for t2 = 0, tmodel.T-1 do 
                 if( agrees( tmodel.patterns[t], tmodel.patterns[t2], tmodel.Gdx[d+1], tmodel.Gdy[d+1]) == true ) then 
-                    table.insert(list, t2) 
+                    local last = table.count(list)
+                    list[last] = t2 
                 end
             end
             tmodel.propagator[d][t] = {} 
             for c = 0, table.count(list)-1 do 
-                tmodel.propagator[d][t][c] = list[c+1] 
+                tmodel.propagator[d][t][c] = list[c] 
             end 
         end 
     end 

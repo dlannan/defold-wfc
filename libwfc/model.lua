@@ -79,8 +79,8 @@ model.init = function( self )
     self.sumOfWeightLogWeights = 0 
 
     for t = 0, self.T-1 do
-        self.weightLogWeights[t] = self.weights[t+1] * math.log(self.weights[t+1])
-        self.sumOfWeights = self.sumOfWeights + self.weights[t+1] 
+        self.weightLogWeights[t] = self.weights[t] * math.log(self.weights[t])
+        self.sumOfWeights = self.sumOfWeights + self.weights[t] 
         self.sumOfWeightLogWeights = self.sumOfWeightLogWeights + self.weightLogWeights[t]
     end 
 
@@ -168,7 +168,7 @@ model.observe = function( self, node )
     local w = self.wave[node]
     for t = 0, self.T-1 do 
         self.distribution[t] = 0.0 
-        if( w[t] == true ) then self.distribution[t] = self.weights[t+1] end
+        if( w[t] == true ) then self.distribution[t] = self.weights[t] end
     end 
     local r = Random( self.distribution, math.random() )
     for t=0, self.T-1 do 
@@ -226,7 +226,7 @@ model.ban = function ( self, i, t )
     self.stacksize = self.stacksize + 1
 
     self.sumsOfOnes[i] = self.sumsOfOnes[i] - 1 
-    self.sumsOfWeights[i] = self.sumsOfWeights[i] - self.weights[t+1] 
+    self.sumsOfWeights[i] = self.sumsOfWeights[i] - self.weights[t] 
     self.sumsOfWeightLogWeights[i] = self.sumsOfWeightLogWeights[i] - self.weightLogWeights[t] 
 
     local sum = self.sumsOfWeights[i]

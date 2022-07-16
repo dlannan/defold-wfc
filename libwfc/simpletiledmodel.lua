@@ -166,7 +166,8 @@ SimpleTiledModel.new = function( name, subsetName, width, height, periodic, blac
                 end
 
                 for t = 0, cardinality-1 do 
-                    table.insert(weightList, tonumber(etile.props["weight"]) or 1.0 ) 
+                    local last = table.count(weightList)
+                    weightList[last] = tonumber(etile.props["weight"]) or 1.0 
                 end 
             end
         end)
@@ -290,7 +291,7 @@ local function GetLambdas( T, arr, weights)
     if( arr and table.count(arr) > 0 ) then
     for i = 0, T-1 do 
         if(arr[i] == true) then 
-            sum = sum + weights[i+1]
+            sum = sum + weights[i]
         end 
     end 
     end
@@ -330,9 +331,9 @@ SimpleTiledModel.Graphics = function(tmodel)
                             for t = 0, tmodel.T-1 do 
                                 if (a[t]) then
                                     local c = tmodel.tiles[t+1][xt + yt * tmodel.tilesize]
-                                    r = r + c.r * tmodel.weights[t+1] * lambda;
-                                    g = g + c.g * tmodel.weights[t+1] * lambda;
-                                    b = b + c.b * tmodel.weights[t+1] * lambda;
+                                    r = r + c.r * tmodel.weights[t] * lambda;
+                                    g = g + c.g * tmodel.weights[t] * lambda;
+                                    b = b + c.b * tmodel.weights[t] * lambda;
                                 end
                             end
 
