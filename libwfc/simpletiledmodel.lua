@@ -79,9 +79,8 @@ SimpleTiledModel.new = function( name, subsetName, width, height, periodic, blac
         xmlElementFilter( tiles.element, "tile", function( etile )
 
             local tilename = etile.props["name"]
-            if(subset and subset[tilename] == nil) then
-                print("Subsets will be used.")
-            else 
+            local filetest = (subset and subset[tilename] == nil)
+            if( not filetest ) then  
                 local a,b = nil, nil
                 local cardinality = 0 
                 
@@ -115,7 +114,7 @@ SimpleTiledModel.new = function( name, subsetName, width, height, periodic, blac
                 tmodel.T = table.count(action)
                 firstOccurrence[tilename] = tmodel.T
 
-                local map = {}
+                local map = newArray( cardinality, {} )
                 for t = 0, cardinality - 1 do 
 
                     map[t] = {}
@@ -154,8 +153,14 @@ SimpleTiledModel.new = function( name, subsetName, width, height, periodic, blac
                     table.insert(tmodel.tilenames, tilename.." 0")
 
                     for t = 1, cardinality - 1 do 
-                        if( t <= 3 ) then table.insert(tmodel.tiles, rotate( tmodel.tiles[tmodel.T + t ])) end 
-                        if( t >= 4 ) then table.insert(tmodel.tiles, reflect( tmodel.tiles[tmodel.T + t - 3])) end 
+                        if( t <= 3 ) then 
+                            local rotdata =  rotate( tmodel.tiles[tmodel.T + t] )
+                            table.insert(tmodel.tiles, rotdata) 
+                        end 
+                        if( t >= 4 ) then 
+                            local refdata =  reflect( tmodel.tiles[tmodel.T + t - 3] )
+                            table.insert(tmodel.tiles, refdata) 
+                        end 
                         table.insert(tmodel.tilenames, tilename.." "..t)
                     end
                 end
@@ -168,19 +173,17 @@ SimpleTiledModel.new = function( name, subsetName, width, height, periodic, blac
     end)
 
     assert(table.count(action) > 0, "No actions? :"..table.count(action))
-    pprint("[WEIGHTLIST]"..table.count(weightList))
     tmodel.T = table.count(action)
     tmodel.weights = weightList
 
-    tmodel.propagator = {}
-    local densePropagator = {} 
+    tmodel.propagator = newArray(4, {})
+    local densePropagator = newArray(4, {}) 
 
     for d = 0, 3 do 
-        densePropagator[d] = {}
-        tmodel.propagator[d] = {} 
+        densePropagator[d] = newArray(tmodel.T, {})
+        tmodel.propagator[d] = newArray(tmodel.T, {}) 
         for t = 0, tmodel.T-1 do 
             densePropagator[d][t] = {} 
-            tmodel.propagator[d][t] = {}
         end 
     end
 
@@ -189,9 +192,9 @@ SimpleTiledModel.new = function( name, subsetName, width, height, periodic, blac
             local left = nbr.props["left"]:split( " " )
             local right = nbr.props["right"]:split( " " )
 
-            if (subset and (( subset[left[1]] == nil ) or ( subset[right[1]] == nil ))) then 
+            local test = (subset and (( subset[left[1]] == nil ) or ( subset[right[1]] == nil ))) 
 
-            else
+            if not test then
                 local llen = tonumber(left[2] or 0)
                 local L = action[firstOccurrence[left[1]]+1][llen]
                 local D = action[L+1][1]
@@ -199,15 +202,15 @@ SimpleTiledModel.new = function( name, subsetName, width, height, periodic, blac
                 local R = action[firstOccurrence[right[1]]+1][rlen]
                 local U = action[R+1][1]
 
-                densePropagator[0][R][L] = true;
-                densePropagator[0][action[R+1][6]][action[L+1][6]] = true;
-                densePropagator[0][action[L+1][4]][action[R+1][4]] = true;
-                densePropagator[0][action[L+1][2]][action[R+1][2]] = true;
+                densePropagator[0][R][L] = true
+                densePropagator[0][action[R+1][6]][action[L+1][6]] = true
+                densePropagator[0][action[L+1][4]][action[R+1][4]] = true
+                densePropagator[0][action[L+1][2]][action[R+1][2]] = true
 
-                densePropagator[1][U][D] = true;
-                densePropagator[1][action[D+1][6]][action[U+1][6]] = true;
-                densePropagator[1][action[U+1][4]][action[D+1][4]] = true;
-                densePropagator[1][action[D+1][2]][action[U+1][2]] = true;
+                densePropagator[1][U][D] = true
+                densePropagator[1][action[D+1][6]][action[U+1][6]] = true
+                densePropagator[1][action[U+1][4]][action[D+1][4]] = true
+                densePropagator[1][action[D+1][2]][action[U+1][2]] = true
             end
         end) 
     end)
@@ -219,9 +222,9 @@ SimpleTiledModel.new = function( name, subsetName, width, height, periodic, blac
         end
     end
 
-    local sparsePropagator = {}
+    local sparsePropagator = newArray( 4, {} )
     for d = 0, 3 do
-        sparsePropagator[d] = {}
+        sparsePropagator[d] = newArray( tmodel.T, {} )
         for t = 0, tmodel.T-1 do 
             sparsePropagator[d][t] = {}
         end 
@@ -233,16 +236,19 @@ SimpleTiledModel.new = function( name, subsetName, width, height, periodic, blac
             local tp = densePropagator[d][t1]
 
             for t2 = 0, tmodel.T-1 do 
-                if (tp[t2]) then table.insert(sp, t2) end
+                if (tp[t2] == true) then 
+                    local tc = table.count(sp)
+                    sp[tc] = t2 
+                end
             end
 
             local ST = table.count(sp)
             if(ST == 0) then 
-                pprint("ERROR: tile "..tilenames[t1].." has no neighbors in direction "..d)
+                pprint("ERROR: tile "..tmodel.tilenames[t1 + 1].." has no neighbors in direction "..d)
             end
             tmodel.propagator[d][t1] = {}
-            for st = 0, ST-1 do 
-                tmodel.propagator[d][t1][st] = sp[st] 
+            for sst = 0, ST-1 do 
+                tmodel.propagator[d][t1][sst] = sp[sst] 
             end
         end
     end 
@@ -259,7 +265,7 @@ SimpleTiledModel.new = function( name, subsetName, width, height, periodic, blac
         local result = ""
         for  y = 0, self.MY-1 do 
             for x = 0, self.MX-1 do
-                result = result..tostring( self.tilenames[self.observed[x + y * self.MX]+1] )
+                result = result..tostring( self.tilenames[self.observed[x + y * self.MX] + 1] )
             end
             result = result.."\n"
         end
@@ -297,8 +303,7 @@ SimpleTiledModel.Graphics = function(tmodel)
     if (tmodel.observed[0] >= 0) then
         for x = 0, tmodel.MX-1 do 
             for y = 0, tmodel.MY-1 do
-                pprint(tmodel.observed[x + y * tmodel.MX].." "..x.."  "..y)
-                local tile = tmodel.tiles[tmodel.observed[x + y * tmodel.MX]+1]
+                local tile = tmodel.tiles[ tmodel.observed[x + y * tmodel.MX]+1]
                 for yt = 0, tmodel.tilesize-1 do 
                     for xt = 0, tmodel.tilesize-1 do
                         local c = tile[xt + yt * tmodel.tilesize]

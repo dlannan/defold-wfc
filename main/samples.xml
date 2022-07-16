@@ -1,5 +1,21 @@
 <samples>
-  <overlapping name="Skyline" N="3" symmetry="2" ground="True" periodic="True"/>
-  <overlapping name="Flowers" N="3" symmetry="2" ground="True" periodic="True"/>
-  <simpletiled name="Summer" size="10" periodic="False" limit="25"/>
+  <simpletiled name="Summer" size="20"/>
+  <simpletiled name="Castle" size="50" heuristic="Scanline"/>
+  <simpletiled name="Circuit" subset="Turnless" size="34" periodic="True" screenshots="3"/>
+  <simpletiled name="Knots" subset="Standard" size="24" periodic="True"/>
+  <simpletiled name="Knots" subset="Dense" size="24" periodic="True"/>
+  <simpletiled name="Knots" subset="Crossless" size="24"/>
+  <simpletiled name="Knots" subset="TE" size="24" screenshots="1"/>
+  <simpletiled name="Knots" subset="T" size="24" screenshots="1"/>
+  <simpletiled name="Knots" subset="CL" size="24"/>
+  <simpletiled name="Knots" subset="CE" size="24" periodic="True"/>
+  <simpletiled name="Knots" subset="C" size="24" periodic="True"/>
+  <simpletiled name="Knots" subset="Fabric" size="24" periodic="True" screenshots="1"/>
+  <simpletiled name="Knots" subset="Dense Fabric" size="24" periodic="True" screenshots="1"/>
+  <simpletiled name="Rooms" size="30"/>
+  <simpletiled name="Circles" size="24" screenshots="1"/>
+  <simpletiled name="Circles" subset="Large Circles" size="24" screenshots="1"/>
+  <simpletiled name="Circles" subset="Large Circles and Solid" size="24" screenshots="1"/>
+  <simpletiled name="Circles" subset="No Solid" size="24" screenshots="1"/>
+  <simpletiled name="FloorPlan" size="20" screenshots="3"/>
 </samples>

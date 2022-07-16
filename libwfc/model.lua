@@ -143,10 +143,9 @@ model.nextunobservednode = function( self )
     local min = 1E+4
     local argmin = -1
 
-    -- PROBLEMS IN HERE!!!
-    for i=0, table.count(self.wave) -1 do 
-        if( self.periodic == false and (( (i % self.MX) + self.N > self.MX ) or ( math.floor(i / self.MX) + self.N > self.MY))) then 
-        else 
+    for i=0, table.count(self.wave) - 1 do 
+        local test =  self.periodic == false and (( (i % self.MX) + self.N > self.MX ) or ( math.floor(i / self.MX) + self.N > self.MY))
+        if(not test) then 
             local remainingValues = self.sumsOfOnes[i]
             local entropy = remainingValues
             if( self.heuristic == Heuristic.entropy ) then entropy = self.entropies[i] end
@@ -161,7 +160,6 @@ model.nextunobservednode = function( self )
             end 
         end
     end 
-
     return argmin
 end 
 
@@ -173,7 +171,6 @@ model.observe = function( self, node )
         if( w[t] == true ) then self.distribution[t] = self.weights[t+1] end
     end 
     local r = Random( self.distribution, math.random() )
-    print(r)
     for t=0, self.T-1 do 
         if( w[t] ~= ( t == r )) then 
             self:ban( node, t ) 

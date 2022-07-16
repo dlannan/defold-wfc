@@ -61,7 +61,6 @@ OverlappingModel.new = function( name, N, width, height, periodicInput, periodic
         return pattern( function( tx, ty ) return sample[ ((bx+tx) % SX) + ((by + ty) % SY) * SX ] end )
     end
     local function rotate( p ) 
-        
         return pattern( function(x,y) return p[tmodel.N - 1 - y + x * tmodel.N] end) 
     end
     local function reflect( p ) 
@@ -84,7 +83,7 @@ OverlappingModel.new = function( name, N, width, height, periodicInput, periodic
         local power =  W 
         local result = newArray( tmodel.N * tmodel.N, 0 )
         for i=0, tmodel.N * tmodel.N-1 do 
-            power = math.floor( power / C ) 
+            power = power / C 
             local count = 0 
             while( residue >= power) do 
                 residue = residue - power 
@@ -102,6 +101,7 @@ OverlappingModel.new = function( name, N, width, height, periodicInput, periodic
     local xcount = SX - tmodel.N + 1
     if(periodicInput == true) then xcount = SX end 
     for y = 0, ycount - 1 do 
+        local test = 1
         for x = 0, xcount - 1 do
 
             local ps = newArray( 8, {} )
