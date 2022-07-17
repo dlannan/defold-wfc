@@ -26,6 +26,9 @@ Features:
 - All pngs in the output folder are removed upon startup. If you want to save your generated pngs, copy them out of the output folder!
 
 Todos:
+- Add a way to halt the process if its taking too long.
+- Add seed entry for gui
+- Show the image updating live.
 - There is currently no gui setting for choosing a seed value. I will add this.
 - The sample png source files are not necessarily under the MIT license. See below. This will change, as all samples will be removed and replaced with free versions.
 - General cleanup and perf improvements.
