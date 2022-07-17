@@ -71,14 +71,14 @@ program.checkProps = function( e, overlapping )
         local periodicInput = (string.lower(e.props["periodicInput"] or "true") == "true") 
         local symmetry = tonumber(e.props["symmetry"] or 8) 
         local ground = string.lower(e.props["ground"] or "false") == "true"
-        model = OverlappingModel.new( e.props["name"], N, width, height, periodicInput, periodic, symmetry, ground, heuristic )
+        model = OverlappingModel.new( e.props["name"], N, 512, 512, periodicInput, periodic, symmetry, ground, heuristic )
     else 
         local subset = e.props["subset"]
         local blackBackground = (string.lower(e.props["blackBackground"] or "false") == "true") 
         model = SimpleTiledModel.new( e.props["name"], subset, width, height, periodic, blackBackground, heuristic )
     end
 
-    runModel(model,  e)
+    if(model) then runModel(model,  e) end
 end
 
 program.main = function()

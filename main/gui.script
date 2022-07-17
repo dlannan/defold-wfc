@@ -1,0 +1,437 @@
+local tinsert = table.insert
+local program = require("libwfc.program") 
+
+--------------------------------------------------------------------------------
+
+local WINDOW_SCALE 		= 1.5
+local AGENT_DATASIZE 	= 10
+
+local LINECOL 			= 140
+local DEFAULT_WIDTH 	= 100
+local DEFAULT_HEIGHT	= 100
+local DEFAULT_PERIODIC  = true
+local DEFAULT_BLACKBACKGROUND = false
+
+local SAMPLES = {}
+local SAMPLES_RUNNABLES	= {}
+
+
+local MODEL = { "Simple Tiled Model", "Overlapped Model" }
+local MODEL_HEURISTIC = { "Entropy", "MRV", "Scanline" }
+
+--------------------------------------------------------------------------------
+
+local function runNext(self)
+
+	local v = SAMPLES_RUNNABLES[ self.selected_sample ]
+	if(v) then program.checkProps( v.e, v.overlap ) end
+end
+
+--------------------------------------------------------------------------------
+
+local function set_style()
+	imgui.set_style_window_rounding(0)
+	imgui.set_style_frame_rounding(0)
+	imgui.set_style_scrollbar_rounding(2)
+	imgui.set_style_tab_rounding(2)
+	imgui.set_style_color(imgui.ImGuiCol_Text, 0.90, 0.90, 0.90, 0.90)
+	imgui.set_style_color(imgui.ImGuiCol_TextDisabled, 0.60, 0.60, 0.60, 1.00)
+	imgui.set_style_color(imgui.ImGuiCol_WindowBg, 0.09, 0.09, 0.15, 1.00)
+	imgui.set_style_color(imgui.ImGuiCol_PopupBg, 0.05, 0.05, 0.10, 0.85)
+	imgui.set_style_color(imgui.ImGuiCol_Border, 0.70, 0.70, 0.70, 0.65)
+	imgui.set_style_color(imgui.ImGuiCol_BorderShadow, 0.00, 0.00, 0.00, 0.00)
+	imgui.set_style_color(imgui.ImGuiCol_FrameBg, 0.00, 0.00, 0.01, 1.00)
+	imgui.set_style_color(imgui.ImGuiCol_FrameBgHovered, 0.90, 0.80, 0.80, 0.40)
+	imgui.set_style_color(imgui.ImGuiCol_FrameBgActive, 0.90, 0.65, 0.65, 0.45)
+	imgui.set_style_color(imgui.ImGuiCol_TitleBg, 0.00, 0.00, 0.00, 0.83)
+	imgui.set_style_color(imgui.ImGuiCol_TitleBgCollapsed, 0.40, 0.40, 0.80, 0.20)
+	imgui.set_style_color(imgui.ImGuiCol_TitleBgActive, 0.00, 0.00, 0.00, 0.87)
+	imgui.set_style_color(imgui.ImGuiCol_MenuBarBg, 0.01, 0.01, 0.02, 0.80)
+	imgui.set_style_color(imgui.ImGuiCol_ScrollbarBg, 0.20, 0.25, 0.30, 0.60)
+	imgui.set_style_color(imgui.ImGuiCol_ScrollbarGrab, 0.55, 0.53, 0.55, 0.51)
+	imgui.set_style_color(imgui.ImGuiCol_ScrollbarGrabHovered, 0.56, 0.56, 0.56, 1.00)
+	imgui.set_style_color(imgui.ImGuiCol_ScrollbarGrabActive, 0.56, 0.56, 0.56, 0.91)
+	imgui.set_style_color(imgui.ImGuiCol_CheckMark, 0.90, 0.90, 0.90, 0.83)
+	imgui.set_style_color(imgui.ImGuiCol_SliderGrab, 0.70, 0.70, 0.70, 0.62)
+	imgui.set_style_color(imgui.ImGuiCol_SliderGrabActive, 0.30, 0.30, 0.30, 0.84)
+	imgui.set_style_color(imgui.ImGuiCol_Button, 0.48, 0.72, 0.89, 0.49)
+	imgui.set_style_color(imgui.ImGuiCol_ButtonHovered, 0.50, 0.69, 0.99, 0.68)
+	imgui.set_style_color(imgui.ImGuiCol_ButtonActive, 0.80, 0.50, 0.50, 1.00)
+	imgui.set_style_color(imgui.ImGuiCol_Header, 0.30, 0.69, 1.00, 0.53)
+	imgui.set_style_color(imgui.ImGuiCol_HeaderHovered, 0.44, 0.61, 0.86, 1.00)
+	imgui.set_style_color(imgui.ImGuiCol_HeaderActive, 0.38, 0.62, 0.83, 1.00)
+	imgui.set_style_color(imgui.ImGuiCol_ResizeGrip, 1.00, 1.00, 1.00, 0.85)
+	imgui.set_style_color(imgui.ImGuiCol_ResizeGripHovered, 1.00, 1.00, 1.00, 0.60)
+	imgui.set_style_color(imgui.ImGuiCol_ResizeGripActive, 1.00, 1.00, 1.00, 0.90)
+	imgui.set_style_color(imgui.ImGuiCol_PlotLines, 1.00, 1.00, 1.00, 1.00)
+	imgui.set_style_color(imgui.ImGuiCol_PlotLinesHovered, 0.90, 0.70, 0.00, 1.00)
+	imgui.set_style_color(imgui.ImGuiCol_PlotHistogram, 0.90, 0.70, 0.00, 1.00)
+	imgui.set_style_color(imgui.ImGuiCol_PlotHistogramHovered, 1.00, 0.60, 0.00, 1.00)
+	imgui.set_style_color(imgui.ImGuiCol_TextSelectedBg, 0.00, 0.00, 1.00, 0.35)
+	imgui.set_style_color(imgui.ImGuiCol_Tab, 0.48, 0.72, 0.89, 0.49)
+		
+end
+
+--------------------------------------------------------------------------------
+
+local function startSim(self)
+	self.selected_model = 1
+	self.model_width = DEFAULT_WIDTH
+	self.model_height = DEFAULT_HEIGHT
+	self.model_periodic = DEFAULT_PERIODIC
+	self.black_background = DEFAULT_BLACKBACKGROUND
+
+	self.model_heuristic = 1
+	self.selected_sample = 1
+end
+
+--------------------------------------------------------------------------------
+
+local function stopSim(self)
+
+end 
+
+--------------------------------------------------------------------------------
+
+function init(self)
+
+	msg.post("@render:", "clear_color", {color = vmath.vector4(1, 1, 1, 1)})
+	-- size of texture when scaled to nearest power of two
+	local width = 512
+	local height = 512
+	local channels = 4
+
+	self.resource_path = go.get("/go#sprite", "texture0")
+	self.resource_agent = go.get("/agent#sprite", "texture0")
+
+	self.buffer_info = {
+		buffer = buffer.create(width * height, {{name = hash("rgba"), type = buffer.VALUE_TYPE_UINT8, count = channels}}),
+		width = width, height = height,	channels = channels
+	}
+
+	self.buffer_agent = {
+		buffer = buffer.create(width * height, {{name = hash("rgba"), type = buffer.VALUE_TYPE_UINT8, count = channels}}),
+		width = width, height = height,	channels = channels
+	}
+
+	self.header = {width = width, height = height, type = resource.TEXTURE_TYPE_2D, format = resource.TEXTURE_FORMAT_RGBA, num_mip_maps = 1}
+
+	drawpixels.fill(self.buffer_info, 255, 255, 0, 255)
+	resource.set_texture(self.resource_path, self.header, self.buffer_info.buffer)
+
+	drawpixels.fill(self.buffer_agent, 0, 255, 255, 255)
+	resource.set_texture(self.resource_agent, self.header, self.buffer_agent.buffer)
+
+	imgui.set_ini_filename()
+	set_style()
+
+	self.mouse = { x = 0, y = 0 }
+	self.values_line = {}
+	self.values_hist = {}
+
+	local fontsize 		= 16.0
+	local fontsizebase 	= 16.0
+	self.fonts 	= {}
+	-- local regular_data, error = sys.load_resource("/main/fonts/nokiafc22.ttf")
+	-- self.fonts["Regular"] = imgui.font_add_ttf_data(regular_data, #regular_data, fontsize, fontsizebase)
+	local regular_data, error = sys.load_resource("/main/fonts/Montserrat-Regular.ttf")
+	self.fonts["Regular"] = imgui.font_add_ttf_data(regular_data, #regular_data, fontsize, fontsizebase)
+	-- local bold_data, error = sys.load_resource("/main/fonts/Montserrat-Bold.ttf")
+	-- self.fonts["Bold"] = imgui.font_add_ttf_data(bold_data, #bold_data, fontsize, fontsizebase)
+	-- local italic_data, error = sys.load_resource("/main/fonts/Montserrat-Italic.ttf")
+	-- self.fonts["Italic"] = imgui.font_add_ttf_data(italic_data, #italic_data, fontsize, fontsizebase)
+	-- local bolditalic_data, error = sys.load_resource("/main/fonts/Montserrat-BoldItalic.ttf")
+	-- self.fonts["BoldItalic"] = imgui.font_add_ttf_data(bolditalic_data, #bolditalic_data, fontsize, fontsizebase)
+
+	startSim(self)
+	-- pprint(self.iniTable)
+	-- 		inifile.save('data/biosim4.ini', self.iniTable)
+
+	program.main()
+
+	self.runnable = program.runQ
+
+end
+
+--------------------------------------------------------------------------------
+local function textColorLabel( txt )
+	imgui.text_colored(txt,  0.48, 0.72, 0.89, 1 ); imgui.same_line(LINECOL)
+end 
+
+local function update_tab1(self)
+
+	local flags = imgui.WINDOWFLAGS_NOMOVE
+	flags = bit.bor( flags, imgui.WINDOWFLAGS_NORESIZE )
+	flags = bit.bor( flags, imgui.WINDOWFLAGS_NOCOLLAPSE )
+	flags = bit.bor( flags, imgui.WINDOWFLAGS_HORIZONTALSCROLLBAR )
+	
+	imgui.begin_child("", 0, 0, false, flags)
+
+	imgui.text_colored(" Choose Model Type: ", 1, 1, 0, 1 )
+
+	local changed, modeltype = imgui.combo("##modeltype", self.selected_model or 1, MODEL)
+	if changed then
+		self.selected_model = modeltype
+	end
+
+	imgui.separator()
+	
+	-- If simple tiled model set params 
+	if(self.selected_model == 1) then 
+		textColorLabel(" Name: ")
+		changed, newname = imgui.input_text("##name", self.model_name or "Sample 1")
+		if(changed) then self.model_name = newname end
+
+		textColorLabel(" Subset Name: ")
+		changed, newname = imgui.input_text("##subsetname ", self.model_subset_name or "Subset Sample 1")
+		if(changed) then self.model_subset_name = newname end
+
+		textColorLabel(" Width: ")
+		changed, w = imgui.input_int( "##width", self.model_width or DEFAULT_WIDTH )
+		if changed then self.model_width = w end
+
+		textColorLabel(" Height: ")
+		changed, h = imgui.input_int( "##height", self.model_height or DEFAULT_HEIGHT )
+		if changed then self.model_height = h end 
+
+		textColorLabel(" Periodic: ")
+		changed, p = imgui.checkbox( "##periodic", self.model_periodic )
+		if changed then self.model_periodic = p end 
+
+		textColorLabel(" Black Background: ")
+		changed, b = imgui.checkbox( "##blackbg", self.black_background )
+		if changed then self.black_background = b end 
+
+		textColorLabel(" Model Heuristic: ")
+		local changed, htype = imgui.combo("##heuristic", self.model_heuristic, MODEL_HEURISTIC)
+		if changed then
+			self.model_heuristic = htype
+		end
+	end 
+	-- If overlapped model set params
+	if(self.selected_model == 2) then 
+	end 
+	
+	imgui.end_child()
+end
+
+--------------------------------------------------------------------------------
+
+local function makeData(self)
+	self.values_line = {}
+	self.values_hist = {}
+	for i=1, 60 do 
+		local data = math.random(1, 30)
+		self.values_hist[data] = (self.values_hist[data] or 0) + 1
+		table.insert(self.values_line, data)
+	end
+end
+
+--------------------------------------------------------------------------------
+
+local function update_tab2(self)
+
+	makeData(self)
+	
+	imgui.text_colored(" Generation Survival Plot ", 1, 0, 0, 1 )
+	imgui.plot_lines( "", 0, 310 * WINDOW_SCALE, 120 * WINDOW_SCALE, self.values_hist )
+
+	imgui.separator()
+
+	imgui.text_colored(" Generation Diversity Plot ", 0, 0, 1, 1 )
+	imgui.plot_lines( "", 0, 310 * WINDOW_SCALE, 120 * WINDOW_SCALE, self.values_hist )
+
+	imgui.separator()
+
+	imgui.text_colored(" Diversity Histogram ", 0, 1, 0, 1 )
+	imgui.plot_histogram( "", 0, 310 * WINDOW_SCALE, 120 * WINDOW_SCALE, self.values_line )
+end
+
+--------------------------------------------------------------------------------
+
+local function update_tab3(self)
+
+	local flags = imgui.WINDOWFLAGS_NOMOVE
+	flags = bit.bor( flags, imgui.WINDOWFLAGS_NORESIZE )
+	flags = bit.bor( flags, imgui.WINDOWFLAGS_NOCOLLAPSE )
+	flags = bit.bor( flags, imgui.WINDOWFLAGS_HORIZONTALSCROLLBAR )
+	imgui.begin_child("", 0, 0, false, flags)
+
+	local a = self.agent
+-- 	local col = { r = a.r * 0.00390625, g = a.g * 0.00390625, b = a.b * 0.00390625 }
+-- 	imgui.text_colored(" Agent No: "..tostring(a.id), col.r, col.g, col.b, 1 )
+-- 
+-- 	if(a.joins and a.nodes) then
+-- 		for i = 0, #a.joins - 1 do 
+-- 			local p1 = i * 2 + 1 
+-- 			local p2 = a.joins[i] * 2 + 1
+-- 			local x1, y1  = a.nodes[p1] + 256, a.nodes[p1 + 1] + 256
+-- 			local x2, y2  = a.nodes[p2] + 256, a.nodes[p2 + 1] + 256
+-- 			-- print(x1, y1, x2, y2)
+-- 			drawpixels.line(self.buffer_agent, x1, y1, x2, y2, 255, 255, 255, 255, false)
+-- 		end 
+-- 	end
+-- 
+-- 	if(a.nodes) then 
+-- 		for i = 1, #a.nodes, 2 do 
+-- 			local x, y  = a.nodes[i] + 256, a.nodes[i+1] + 256
+-- 			drawpixels.filled_circle(self.buffer_agent, x, y, 25, 84, 84, 84, 255, false)
+-- 		end 
+-- 	end 
+-- 
+-- 	local img_data = buffer.get_bytes(self.buffer_agent.buffer, hash("rgba"))
+-- 	local img = imgui.image_load_rawdata( "imageAgents", self.buffer_agent.width, self.buffer_agent.height, img_data )
+-- 	imgui.image_add(img, 512 * WINDOW_SCALE, 512 * WINDOW_SCALE)
+-- 	if(a.nodes) then 
+-- 		local tscale = ( 312 * WINDOW_SCALE )/ 512
+-- 		for i = 1, #a.nodes, 2 do 
+-- 			local x, y  = a.nodes[i] + 256, a.nodes[i+1] + 256
+-- 			imgui.set_cursor_pos((x - 5) * WINDOW_SCALE, (y + 5) * WINDOW_SCALE)
+-- 			imgui.text_colored(a.names[math.floor(i/2)], 1, 1, 0, 1 )
+-- 		end 
+-- 	end 
+
+	imgui.end_child()
+end
+
+--------------------------------------------------------------------------------
+
+function update(self, dt)
+
+	imgui.set_next_window_pos( 5, 5 )
+	imgui.set_next_window_size(320 * WINDOW_SCALE, 630 * WINDOW_SCALE)
+	
+	local flags = imgui.WINDOWFLAGS_NOMOVE
+	flags = bit.bor( flags, imgui.WINDOWFLAGS_NORESIZE )
+	flags = bit.bor( flags, imgui.WINDOWFLAGS_NOCOLLAPSE )
+	flags = bit.bor( flags, imgui.WINDOWFLAGS_NODECORATION )
+	imgui.begin_window("Defold Wave Function Collapse", true, flags)
+
+	imgui.text("Thanks to mxgmn for the Wave Function Collapse information.")
+	imgui.text("https://github.com/mxgmn/WaveFunctionCollapse")
+	imgui.separator()
+
+	imgui.text_colored(" Select Sample: ", 1, 1, 0, 1 )
+	if imgui.button("Run Sample") then
+		runNext(self)
+	end
+
+	SAMPLES = {}
+	for k,v in ipairs(self.runnable) do
+		if(v) then
+			SAMPLES_RUNNABLES[ k ] = v  
+			tinsert(SAMPLES, v.e.props["name"]) 
+		end
+	end 
+	imgui.same_line(140)
+	
+	local changed, sample = imgui.combo("##sample", self.selected_sample, SAMPLES)
+	if changed then
+		self.selected_sample = sample
+		local v = SAMPLES_RUNNABLES[ self.selected_sample ]
+		pprint(v)
+		if(v) then 
+			if(v.overlap == true) then
+				self.selected_model = 2
+			else
+				self.selected_model = 1
+			end
+		end
+	end
+	
+	imgui.separator()
+	imgui.text_colored(" ", 1, 1, 1, 1 )
+	
+	imgui.separator()
+
+	imgui.begin_tab_bar("tabs")
+
+	local tab1_open = imgui.begin_tab_item("Wave Function Params")
+	if tab1_open then
+		update_tab1(self)
+		imgui.end_tab_item()
+	end
+
+	local tab2_open = imgui.begin_tab_item("Graphs")
+	if tab2_open then
+		update_tab2(self)
+		imgui.end_tab_item()
+	end
+	
+	local tab3_open = imgui.begin_tab_item("Agent")
+	if tab3_open then 
+		update_tab3(self)
+		imgui.end_tab_item()
+	end
+
+	imgui.end_tab_bar()	
+	imgui.end_window()
+
+-- print(count, generation, survivors)
+
+	if(count == self.popdatacount) then 
+		drawpixels.fill(self.buffer_info, 255, 255, 255, 255)
+		local idx = 1
+-- 		for k = 1, count-1, AGENT_DATASIZE do 
+-- 			self.dataStore[idx] = self.dataStore[idx] or {}
+-- 			local x, y, sz, r, g, b  = unpack(agents, k, k+5)
+-- 			local age, alive, startx, starty = unpack( agents, k+6, k+9 ) 
+-- 			drawpixels.filled_rect(self.buffer_info, x+1, y+1, sz, sz, r, g, b, 255, false)
+-- 			
+-- -- print(x, y, sz, r, g, b)
+-- -- print(age, alive, startx, starty) 
+-- 
+-- 			self.dataStore[idx] = { 
+-- 				pos = { x = x, y = y },
+-- 				size = sz,
+-- 				color = { r = r, g = g, b = b },
+-- 				age = age, 
+-- 				alive = alive, 
+-- 				birth_pos = { x = startx, y = starty },
+-- 			}
+-- 			idx = idx + 1
+-- 		end 
+		resource.set_texture(self.resource_path, self.header, self.buffer_info.buffer)
+	end
+		
+	imgui.set_next_window_pos( 330 * WINDOW_SCALE, 5 )
+	imgui.set_next_window_size(625 * WINDOW_SCALE, 630 * WINDOW_SCALE)
+
+	local flags = imgui.WINDOWFLAGS_NOMOVE
+	flags = bit.bor( flags, imgui.WINDOWFLAGS_NORESIZE )
+	flags = bit.bor( flags, imgui.WINDOWFLAGS_NOCOLLAPSE )
+	flags = bit.bor( flags, imgui.WINDOWFLAGS_NODECORATION )
+	imgui.begin_window("Generation 1", true, flags)
+	local img_data = buffer.get_bytes(self.buffer_info.buffer, hash("rgba"))
+	local img = imgui.image_load_rawdata( "image1", self.buffer_info.width, self.buffer_info.height, img_data )
+	imgui.image_add(img, 604 * WINDOW_SCALE, 604 * WINDOW_SCALE)
+
+-- 	local clicked = imgui.is_item_clicked(0)
+-- 	if(clicked == true) then 
+-- 		-- Get mouse click then mouse position. 
+-- 		local points = {}
+-- 		local names = {}
+-- 		local joins = {}
+-- 		self.agent = { id = 0, r = 255, b = 255, g = 255 }
+-- 		local xscale = 513 / (596 * WINDOW_SCALE)
+-- 		local posx = (self.mouse.x - 347 * WINDOW_SCALE) * xscale
+-- 		local yscale = 512 / (596 * WINDOW_SCALE)
+-- 		local posy = 512 - (self.mouse.y * yscale - 20)
+-- 
+-- 		--pprint(joins)
+-- 		drawpixels.fill(self.buffer_agent, 0, 0, 0, 255)
+-- 	end
+
+	imgui.end_window()
+end
+
+--------------------------------------------------------------------------------
+
+
+function on_input(self, action_id, action)
+	
+	self.mouse.x = action.x 
+	self.mouse.y = action.y
+end
+
+--------------------------------------------------------------------------------

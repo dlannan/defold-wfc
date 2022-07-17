@@ -10,7 +10,9 @@ local tiledmodel = {
     blackBackground     = false,
 }
 
-SimpleTiledModel = {}
+SimpleTiledModel = {
+    base_path = "samples/"
+}
 
 SimpleTiledModel.new = function( name, subsetName, width, height, periodic, blackBackground, heuristic )
 
@@ -24,7 +26,7 @@ SimpleTiledModel.new = function( name, subsetName, width, height, periodic, blac
     tmodel.tilesize            = 0
     tmodel.blackBackground     = false
 
-    local xroot = xdocument:loadFile( "samples/"..name.."/data.xml"):children()[1]
+    local xroot = xdocument:loadFile( SimpleTiledModel.base_path..name.."/data.xml"):children()[1]
     local sprops = xroot:properties()
     tmodel.tilesize = tonumber(sprops["size"] or 16) 
     local unique = string.lower(sprops["unique"] or "false") == "true"

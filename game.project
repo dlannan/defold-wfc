@@ -5,8 +5,8 @@ main_collection = /main/main.collectionc
 shared_state = 1
 
 [display]
-width = 960
-height = 640
+width = 1440
+height = 960
 
 [android]
 input_method = HiddenInputField
@@ -16,4 +16,8 @@ title = wfc
 bundle_exclude_resources = 
 write_log = 0
 custom_resources = main/
+dependencies#0 = https://github.com/AGulev/drawpixels/archive/master.zip
+dependencies#1 = https://github.com/dlannan/extension-imgui/archive/master.zip
 
+[input]
+game_binding = /imgui/bindings/imgui.input_bindingc

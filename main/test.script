@@ -1,15 +1,9 @@
 
 
-local program = require("libwfc.program") 
-
 function init(self)
 	-- Add initialization code here
 	-- Learn more: https://defold.com/manuals/script/
 	-- Remove this function if not needed
-
-	program.main()
-
-	self.runnable = program.runQ
 end
 
 function final(self)
@@ -19,12 +13,6 @@ function final(self)
 end
 
 function update(self, dt)
-	
-	local k, v = next( self.runnable, self.k )
-	if(k ) then 
-		self.k  = k
-		if(v) then program.checkProps( v.e, v.overlap ) end
-	end 
 	
 	-- Add update code here
 	-- Learn more: https://defold.com/manuals/script/
