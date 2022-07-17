@@ -32,6 +32,6 @@ Todos:
 - Attempt to get it to work in html5 - will be a bit slow, but with cloud based url sources, could be very interesting.
 
 ---
-Credits - from mxgmn github
+## Credits - from mxgmn github
 
 Circles tileset is taken from Mario Klingemann. FloorPlan tileset is taken from Lingdong Huang. Summer tiles were drawn by Hermann Hillmann. Cat overlapping sample is taken from the Nyan Cat video, Water + Forest + Mountains samples are taken from Ultima IV, 3Bricks sample is taken from Dungeon Crawl Stone Soup, Qud sample was made by Brian Bucklew, MagicOffice + Spirals samples - by rid5x, ColoredCity + Link + Link 2 + Mazelike + RedDot + SmileCity samples - by Arvi Teikari, Wall sample - by Arcaniax, NotKnot + Sand + Wrinkles samples - by Krystian Samp, Circle sample - by Noah Buddy. The rest of the examples and tilesets were made by me. Idea of generating integrated circuits was suggested to me by Moonasaur and their style was taken from Zachtronics' Ruckingenur II. Voxel models were rendered in MagicaVoxel.
