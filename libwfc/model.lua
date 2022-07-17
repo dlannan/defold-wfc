@@ -49,6 +49,8 @@ local model = {
     sumsOfWeights   = {},
     sumsOfWeightLogWeights = {},
     entropies       = {},
+
+    genfiles        = {},
 }
 
 Heuristic = {

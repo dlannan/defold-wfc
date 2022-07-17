@@ -11,21 +11,44 @@ local DEFAULT_WIDTH 	= 100
 local DEFAULT_HEIGHT	= 100
 local DEFAULT_PERIODIC  = true
 local DEFAULT_BLACKBACKGROUND = false
+local DEFAULT_DIM 		= 48
 
-local SAMPLES = {}
+local SAMPLES 			= {}
 local SAMPLES_RUNNABLES	= {}
 
 
-local MODEL = { "Simple Tiled Model", "Overlapped Model" }
-local MODEL_HEURISTIC = { "Entropy", "MRV", "Scanline" }
+local MODEL 			= { "Simple Tiled Model", "Overlapped Model" }
+local MODEL_HEURISTIC 	= { "Entropy", "MRV", "Scanline" }
+
+--------------------------------------------------------------------------------
+
+local function drawBuffer( self )
+
+	if(self.image_select == nil) then return end 
+
+	local finfo = self.totalfiles[self.image_select]
+	drawpixels.fill(self.buffer_info, 255, 255, 255, 255)
+
+	self.stream = buffer.get_stream(self.buffer_info.buffer, hash("rgba"))
+
+	local w, h, c, data = libwfc.image_get( finfo.id )
+	for i = 1, w * h * 4 do
+		self.stream[i] = string.byte(data, i)
+	end
+	resource.set_texture(self.resource_path, self.header, self.buffer_info.buffer)
+end 
 
 --------------------------------------------------------------------------------
 
 local function runNext(self)
 
 	local v = SAMPLES_RUNNABLES[ self.selected_sample ]
-	if(v) then program.checkProps( v.e, v.overlap ) end
-end
+	if(v) then 
+		program.checkProps( self, v.e, v.overlap )
+		self.image_select = self.image_select or 1
+		drawBuffer(self)
+	end
+end 
 
 --------------------------------------------------------------------------------
 
@@ -37,6 +60,7 @@ local function set_style()
 	imgui.set_style_color(imgui.ImGuiCol_Text, 0.90, 0.90, 0.90, 0.90)
 	imgui.set_style_color(imgui.ImGuiCol_TextDisabled, 0.60, 0.60, 0.60, 1.00)
 	imgui.set_style_color(imgui.ImGuiCol_WindowBg, 0.09, 0.09, 0.15, 1.00)
+	imgui.set_style_color(imgui.ImGuiCol_ChildBg, 0.09, 0.09, 0.15, 1.00)
 	imgui.set_style_color(imgui.ImGuiCol_PopupBg, 0.05, 0.05, 0.10, 0.85)
 	imgui.set_style_color(imgui.ImGuiCol_Border, 0.70, 0.70, 0.70, 0.65)
 	imgui.set_style_color(imgui.ImGuiCol_BorderShadow, 0.00, 0.00, 0.00, 0.00)
@@ -75,18 +99,26 @@ end
 --------------------------------------------------------------------------------
 
 local function startSim(self)
-	self.selected_model = 1
-	self.selected_sample = 1
-	self.model_width = DEFAULT_WIDTH
-	self.model_height = DEFAULT_HEIGHT
-	self.model_periodic = DEFAULT_PERIODIC
-	self.black_background = DEFAULT_BLACKBACKGROUND
+	self.selected_model 	= 1
+	self.selected_sample 	= 1
+	self.model_width 		= DEFAULT_WIDTH
+	self.model_height 		= DEFAULT_HEIGHT
+	self.model_periodic 	= DEFAULT_PERIODIC
+	self.black_background 	= DEFAULT_BLACKBACKGROUND
 
-	self.model_heuristic = 1
-	self.selected_sample = 1
+	self.model_heuristic 	= 1
+	self.model_N 			= 1
+	self.model_periodicInput = true
+	self.model_symmetry 	= 8
+	self.model_ground 		= false
 
-	self.model_name = "Chess"
-	self.model_subset_name = ""
+	self.model_name 		= ""
+	self.model_subset 		= ""
+	self.model_subset_name 	= ""
+
+	self.totalfiles			= {}
+
+	self.image_select 		= nil
 end
 
 --------------------------------------------------------------------------------
@@ -94,6 +126,47 @@ end
 local function stopSim(self)
 
 end 
+
+--------------------------------------------------------------------------------
+
+local function updateSamples(self) 
+	SAMPLES = {}
+	for k,v in ipairs(self.runnable) do
+		if(v) then
+			SAMPLES_RUNNABLES[ k ] = v  
+			tinsert(SAMPLES, v.e.props["name"]) 
+		end
+	end 
+end
+
+--------------------------------------------------------------------------------
+
+local function getSampleParams( self)
+	local v = SAMPLES_RUNNABLES[ self.selected_sample ]
+
+	self.model_name			= v.e.props[ "name" ]
+	self.model_size         = tonumber(v.e.props[ "size" ] or DEFAULT_DIM) 
+	self.model_width        = tonumber(v.e.props[ "width" ] or self.model_size) 
+	self.model_height       = tonumber(v.e.props[ "height" ] or self.model_size)
+	self.model_periodic     = (string.lower(v.e.props[ "periodic" ] or "false") == "true")
+
+	local heuristicString   = v.e.props[ "heuristic" ]
+	if(heuristicString == "Entropy") then 
+		self.model_heuristic = Heuristic.entropy
+	elseif(heuristicString == "MRV") then 
+		self.model_heuristic = Heuristic.mrv
+	elseif(heuristicString == "Scanline") then 
+		self.model_heuristic = Heuristic.scanline
+	end
+
+	self.model_N 			= tonumber(v.e.props["N"] or 3)  
+	self.model_periodicInput 		= (string.lower(v.e.props["periodicInput"] or "true") == "true") 
+	self.model_symmetry 			= tonumber(v.e.props["symmetry"] or 8) 
+	self.model_ground 			= string.lower(v.e.props["ground"] or "false") == "true"
+
+	self.model_subset 			= v.e.props["subset"] or ""
+	self.model_blackBaground 		= (string.lower(v.e.props["blackBackground"] or "false") == "true") 
+end
 
 --------------------------------------------------------------------------------
 
@@ -152,9 +225,11 @@ function init(self)
 	-- 		inifile.save('data/biosim4.ini', self.iniTable)
 
 	program.main()
-
 	self.runnable = program.runQ
 
+	updateSamples(self)
+	
+	getSampleParams(self)
 end
 
 --------------------------------------------------------------------------------
@@ -179,58 +254,59 @@ local function update_tab1(self)
 	end
 
 	imgui.separator()
-	
+
+	textColorLabel(" Name: ")
+	changed, newname = imgui.input_text("##name", self.model_name)
+	if(changed) then self.model_name = newname end
+
+	textColorLabel(" Width: ")
+	changed, w = imgui.input_int( "##width", self.model_width )
+	if changed then self.model_width = w end
+
+	textColorLabel(" Height: ")
+	changed, h = imgui.input_int( "##height", self.model_height )
+	if changed then self.model_height = h end 
+		
+	textColorLabel(" Periodic: ")
+	changed, p = imgui.checkbox( "##periodic", self.model_periodic )
+	if changed then self.model_periodic = p end 
+			
+	textColorLabel(" Model Heuristic: ")
+	local changed, htype = imgui.combo("##heuristic", self.model_heuristic, MODEL_HEURISTIC)
+	if changed then
+		self.model_heuristic = htype
+	end
+
 	-- If simple tiled model set params 
 	if(self.selected_model == 1) then 
-
-		local v = SAMPLES_RUNNABLES[ self.selected_sample ]
-		pprint(v)
-		self.model_name			= v.e.props[ "name" ]
-		self.model_size         = tonumber(v.e.props[ "size" ] or dim) 
-		self.model_width        = tonumber(v.e.props[ "width" ] or size) 
-		self.model_height       = tonumber(v.e.props[ "height" ] or size)
-		self.model_periodic     = (string.lower(v.e.props[ "periodic" ] or "false") == "true")
-		local heuristicString   = v.e.props[ "heuristic" ]
-		if(heuristicString == "Entropy") then 
-			self.model_heuristic = 1
-		elseif(heuristicString == "MRV") then 
-			self.model_heuristic = 2
-		elseif(heuristicString == "Scanline") then 
-			self.model_heuristic = 3
-		end
 		
-		textColorLabel(" Name: ")
-		changed, newname = imgui.input_text("##name", self.model_name)
-		if(changed) then self.model_name = newname end
-
 		textColorLabel(" Subset Name: ")
-		changed, newname = imgui.input_text("##subsetname ", self.model_subset_name)
-		if(changed) then self.model_subset_name = newname end
-
-		textColorLabel(" Width: ")
-		changed, w = imgui.input_int( "##width", self.model_width )
-		if changed then self.model_width = w end
-
-		textColorLabel(" Height: ")
-		changed, h = imgui.input_int( "##height", self.model_height )
-		if changed then self.model_height = h end 
-
-		textColorLabel(" Periodic: ")
-		changed, p = imgui.checkbox( "##periodic", self.model_periodic )
-		if changed then self.model_periodic = p end 
+		changed, newname = imgui.input_text("##subsetname ", self.model_subset)
+		if(changed) then self.model_subset = newname end
 
 		textColorLabel(" Black Background: ")
 		changed, b = imgui.checkbox( "##blackbg", self.black_background )
 		if changed then self.black_background = b end 
 
-		textColorLabel(" Model Heuristic: ")
-		local changed, htype = imgui.combo("##heuristic", self.model_heuristic, MODEL_HEURISTIC)
-		if changed then
-			self.model_heuristic = htype
-		end
 	end 
 	-- If overlapped model set params
 	if(self.selected_model == 2) then 
+
+		textColorLabel(" N: ")
+		changed, n = imgui.input_int( "##N", self.model_N )
+		if changed then self.model_N = n end
+		
+		textColorLabel(" Periodic Input ")
+		changed, p = imgui.checkbox( "##periodicInput", self.model_periodicInput )
+		if changed then self.model_periodicInput = p end 
+
+		textColorLabel(" Symmetry: ")
+		changed, s = imgui.input_int( "##symmetry", self.model_symmetry )
+		if changed then self.model_symmetry = s end
+
+		textColorLabel(" Ground: ")
+		changed, g = imgui.checkbox( "##ground", self.model_ground )
+		if changed then self.model_ground = g end 
 	end 
 	
 	imgui.end_child()
@@ -278,40 +354,6 @@ local function update_tab3(self)
 	flags = bit.bor( flags, imgui.WINDOWFLAGS_HORIZONTALSCROLLBAR )
 	imgui.begin_child("", 0, 0, false, flags)
 
-	local a = self.agent
--- 	local col = { r = a.r * 0.00390625, g = a.g * 0.00390625, b = a.b * 0.00390625 }
--- 	imgui.text_colored(" Agent No: "..tostring(a.id), col.r, col.g, col.b, 1 )
--- 
--- 	if(a.joins and a.nodes) then
--- 		for i = 0, #a.joins - 1 do 
--- 			local p1 = i * 2 + 1 
--- 			local p2 = a.joins[i] * 2 + 1
--- 			local x1, y1  = a.nodes[p1] + 256, a.nodes[p1 + 1] + 256
--- 			local x2, y2  = a.nodes[p2] + 256, a.nodes[p2 + 1] + 256
--- 			-- print(x1, y1, x2, y2)
--- 			drawpixels.line(self.buffer_agent, x1, y1, x2, y2, 255, 255, 255, 255, false)
--- 		end 
--- 	end
--- 
--- 	if(a.nodes) then 
--- 		for i = 1, #a.nodes, 2 do 
--- 			local x, y  = a.nodes[i] + 256, a.nodes[i+1] + 256
--- 			drawpixels.filled_circle(self.buffer_agent, x, y, 25, 84, 84, 84, 255, false)
--- 		end 
--- 	end 
--- 
--- 	local img_data = buffer.get_bytes(self.buffer_agent.buffer, hash("rgba"))
--- 	local img = imgui.image_load_rawdata( "imageAgents", self.buffer_agent.width, self.buffer_agent.height, img_data )
--- 	imgui.image_add(img, 512 * WINDOW_SCALE, 512 * WINDOW_SCALE)
--- 	if(a.nodes) then 
--- 		local tscale = ( 312 * WINDOW_SCALE )/ 512
--- 		for i = 1, #a.nodes, 2 do 
--- 			local x, y  = a.nodes[i] + 256, a.nodes[i+1] + 256
--- 			imgui.set_cursor_pos((x - 5) * WINDOW_SCALE, (y + 5) * WINDOW_SCALE)
--- 			imgui.text_colored(a.names[math.floor(i/2)], 1, 1, 0, 1 )
--- 		end 
--- 	end 
-
 	imgui.end_child()
 end
 
@@ -337,18 +379,12 @@ function update(self, dt)
 		runNext(self)
 	end
 
-	SAMPLES = {}
-	for k,v in ipairs(self.runnable) do
-		if(v) then
-			SAMPLES_RUNNABLES[ k ] = v  
-			tinsert(SAMPLES, v.e.props["name"]) 
-		end
-	end 
 	imgui.same_line(140)
-	
+
 	local changed, sample = imgui.combo("##sample", self.selected_sample, SAMPLES)
 	if changed then
 		self.selected_sample = sample
+		
 		local v = SAMPLES_RUNNABLES[ self.selected_sample ]
 		if(v) then 
 			if(v.overlap == true) then
@@ -357,6 +393,8 @@ function update(self, dt)
 				self.selected_model = 1
 			end
 		end
+		updateSamples(self)	
+		getSampleParams(self)
 	end
 	
 	imgui.separator()
@@ -372,47 +410,20 @@ function update(self, dt)
 		imgui.end_tab_item()
 	end
 
-	local tab2_open = imgui.begin_tab_item("Graphs")
-	if tab2_open then
-		update_tab2(self)
-		imgui.end_tab_item()
-	end
-	
-	local tab3_open = imgui.begin_tab_item("Agent")
-	if tab3_open then 
-		update_tab3(self)
-		imgui.end_tab_item()
-	end
+	-- local tab2_open = imgui.begin_tab_item("Graphs")
+	-- if tab2_open then
+	-- 	update_tab2(self)
+	-- 	imgui.end_tab_item()
+	-- end
+	-- 
+	-- local tab3_open = imgui.begin_tab_item("Agent")
+	-- if tab3_open then 
+	-- 	update_tab3(self)
+	-- 	imgui.end_tab_item()
+	-- end
 
 	imgui.end_tab_bar()	
 	imgui.end_window()
-
--- print(count, generation, survivors)
-
-	if(count == self.popdatacount) then 
-		drawpixels.fill(self.buffer_info, 255, 255, 255, 255)
-		local idx = 1
--- 		for k = 1, count-1, AGENT_DATASIZE do 
--- 			self.dataStore[idx] = self.dataStore[idx] or {}
--- 			local x, y, sz, r, g, b  = unpack(agents, k, k+5)
--- 			local age, alive, startx, starty = unpack( agents, k+6, k+9 ) 
--- 			drawpixels.filled_rect(self.buffer_info, x+1, y+1, sz, sz, r, g, b, 255, false)
--- 			
--- -- print(x, y, sz, r, g, b)
--- -- print(age, alive, startx, starty) 
--- 
--- 			self.dataStore[idx] = { 
--- 				pos = { x = x, y = y },
--- 				size = sz,
--- 				color = { r = r, g = g, b = b },
--- 				age = age, 
--- 				alive = alive, 
--- 				birth_pos = { x = startx, y = starty },
--- 			}
--- 			idx = idx + 1
--- 		end 
-		resource.set_texture(self.resource_path, self.header, self.buffer_info.buffer)
-	end
 		
 	imgui.set_next_window_pos( 320 * WINDOW_SCALE, 5 )
 	imgui.set_next_window_size(635 * WINDOW_SCALE, 635 * WINDOW_SCALE)
@@ -426,22 +437,22 @@ function update(self, dt)
 	local img = imgui.image_load_rawdata( "image1", self.buffer_info.width, self.buffer_info.height, img_data )
 	imgui.image_add(img, 625 * WINDOW_SCALE, 625 * WINDOW_SCALE)
 
--- 	local clicked = imgui.is_item_clicked(0)
--- 	if(clicked == true) then 
--- 		-- Get mouse click then mouse position. 
--- 		local points = {}
--- 		local names = {}
--- 		local joins = {}
--- 		self.agent = { id = 0, r = 255, b = 255, g = 255 }
--- 		local xscale = 513 / (596 * WINDOW_SCALE)
--- 		local posx = (self.mouse.x - 347 * WINDOW_SCALE) * xscale
--- 		local yscale = 512 / (596 * WINDOW_SCALE)
--- 		local posy = 512 - (self.mouse.y * yscale - 20)
--- 
--- 		--pprint(joins)
--- 		drawpixels.fill(self.buffer_agent, 0, 0, 0, 255)
--- 	end
-
+	imgui.set_cursor_pos( 10, 10 )
+	imgui.set_style_color(imgui.ImGuiCol_Text, 0.10, 0.10, 0.10, 0.90)
+	if imgui.button(" < ") and self.image_select then
+		self.image_select = self.image_select - 1 
+		if(self.image_select < 1) then self.image_select = table.count(self.totalfiles) end
+		drawBuffer(self)
+	end
+	imgui.same_line(35)
+	imgui.text_colored(string.format(" %03d ", self.image_select or 0), 0.1, 0.1, 0.1, 1 )
+	imgui.same_line(70)
+	if imgui.button(" > ") and self.image_select then
+		self.image_select = self.image_select + 1 
+		if(self.image_select > table.count(self.totalfiles)) then self.image_select = 1 end
+		drawBuffer(self)
+	end
+	imgui.set_style_color(imgui.ImGuiCol_Text, 0.90, 0.90, 0.90, 0.90)
 	imgui.end_window()
 end
 

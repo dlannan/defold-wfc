@@ -182,6 +182,7 @@ OverlappingModel.new = function( name, N, width, height, periodicInput, periodic
         local bdata, w, h = OverlappingModel.Graphics(self) 
         --Write out data to filename 
         local count = libwfc.image_save( filename, w, h, bdata)
+        table.insert(self.genfiles, filename)
         assert(count == w * h, "[ IMAGE ERROR ] "..count.."  "..(w*h))
     end
 

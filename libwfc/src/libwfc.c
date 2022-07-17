@@ -39,6 +39,7 @@
 
 #define STB_IMAGE_STATIC
 #define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include "stb_image.h"
 
 #define STBI_MSC_SECURE_CRT
@@ -138,6 +139,37 @@ static int libwfc_ImageLoad( lua_State *L)
     return 1;
 }
 
+static int libwfc_ImageLoadSize( lua_State *L )
+{
+    DM_LUA_STACK_CHECK(L, 1);
+    const char * filename = luaL_checkstring(L, 1);
+    int newwidth    = luaL_checkinteger(L, 2);
+    int newheight   = luaL_checkinteger(L, 3);
+    unsigned char* resizedPixels = (unsigned char *)malloc( newwidth * newheight * 4);
+
+    ImgObject     iobj;
+    iobj.data       = stbi_load(filename, &iobj.w, &iobj.h, NULL, STBI_rgb_alpha);
+    iobj.comp       = 4;
+    if(iobj.data == nullptr)
+    {
+        dmLogError("Error loading image: %s\n", filename);
+        lua_pushnil(L);
+        return 1;
+    }
+    stbir_resize_uint8(iobj.data, iobj.w, iobj.h, 0, resizedPixels, newwidth, newheight, NULL, 4);
+
+    stbi_image_free(iobj.data);
+    iobj.data = resizedPixels;
+    iobj.w = newwidth;
+    iobj.h = newheight;
+
+    images.push_back(iobj);
+    int idx = images.size() - 1;
+
+    lua_pushinteger(L, idx);
+    return 1;
+}
+
 static int libwfc_ImageGet( lua_State *L )
 {
     int id = luaL_checkinteger(L, 1);
@@ -224,7 +256,7 @@ static const luaL_reg Module_methods[] =
     {"image_save", libwfc_ImageSave},
     {"image_free", libwfc_ImageFree},
     {"image_getpixel", libwfc_ImageGetPixel},
-
+    {"image_loadsize", libwfc_ImageLoadSize },
     {0, 0}
 };
 

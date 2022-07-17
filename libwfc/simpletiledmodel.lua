@@ -37,7 +37,6 @@ SimpleTiledModel.new = function( name, subsetName, width, height, periodic, blac
         local xsubset = {}
         xmlElementFilter( xroot, "subsets", function( ss )
             xmlElementFilter( ss.element, "subset", function( sss )
-                pprint(sss.props["name"])
                 if( sss.props["name"] == subsetName ) then
                     xmlElementFilter( sss.element, "tile", function(etile) 
                         xsubset[etile.props["name"]] = etile.element
@@ -260,6 +259,7 @@ SimpleTiledModel.new = function( name, subsetName, width, height, periodic, blac
         local bdata, w, h = SimpleTiledModel.Graphics(self) 
         --Write out data to filename 
         local count = libwfc.image_save( filename, w, h, bdata)
+        table.insert(self.genfiles, filename)
         assert(count == w * h, "[ IMAGE ERROR ] "..count.."  "..(w*h))
     end
 
