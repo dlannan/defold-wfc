@@ -19,6 +19,7 @@ Heres some simple examples of the app in action:
 
 Features:
 
+- MIT license for project and source code. Sample pngs - licensing info below in credits section (from mxgmn githu).
 - Most of the parameters for running both models. Overlapped Model (single texture source) and Simple Tiled Model (folder + data.xml + source tiles)
 - All samples in sample.xml are in a drop down that can be selected and then "Run Sample" executes them. Generally they output 1 or more png files to the output folder.
 - While executing the Run Sample button will remain red. Some samples can run for a long time if the parameters result in more complex operations.
@@ -26,8 +27,11 @@ Features:
 
 Todos:
 - There is currently no gui setting for choosing a seed value. I will add this.
-- The sample png source files are all under the CC license. See below. This will change, as all samples will be removed and replaced with free versions.
+- The sample png source files are not necessarily under the MIT license. See below. This will change, as all samples will be removed and replaced with free versions.
 - General cleanup and perf improvements.
 - Attempt to get it to work in html5 - will be a bit slow, but with cloud based url sources, could be very interesting.
 
 ---
+Credits - from mxgmn github
+
+Circles tileset is taken from Mario Klingemann. FloorPlan tileset is taken from Lingdong Huang. Summer tiles were drawn by Hermann Hillmann. Cat overlapping sample is taken from the Nyan Cat video, Water + Forest + Mountains samples are taken from Ultima IV, 3Bricks sample is taken from Dungeon Crawl Stone Soup, Qud sample was made by Brian Bucklew, MagicOffice + Spirals samples - by rid5x, ColoredCity + Link + Link 2 + Mazelike + RedDot + SmileCity samples - by Arvi Teikari, Wall sample - by Arcaniax, NotKnot + Sand + Wrinkles samples - by Krystian Samp, Circle sample - by Noah Buddy. The rest of the examples and tilesets were made by me. Idea of generating integrated circuits was suggested to me by Moonasaur and their style was taken from Zachtronics' Ruckingenur II. Voxel models were rendered in MagicaVoxel.
