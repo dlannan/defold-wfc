@@ -52,13 +52,13 @@ program.checkProps = function( e, overlapping )
     local dim = 24
     if(overlapping) then dim = 48 end
 
-    local size  = tonumber(e.props[ "size" ] or dim) 
-    local width = tonumber(e.props[ "width" ] or size) 
-    local height = tonumber(e.props[ "height" ] or size)
-    local periodic = (string.lower(e.props[ "periodic" ] or "false") == "true")
-    local heuristicString  = e.props[ "heuristic" ]
+    local size              = tonumber(e.props[ "size" ] or dim) 
+    local width             = tonumber(e.props[ "width" ] or size) 
+    local height            = tonumber(e.props[ "height" ] or size)
+    local periodic          = (string.lower(e.props[ "periodic" ] or "false") == "true")
+    local heuristicString   = e.props[ "heuristic" ]
 
-    local heuristic = Heuristic.entropy
+    local heuristic         = Heuristic.entropy
     if(heuristicString == "Scanline") then 
         heuristic = Heuristic.scanline 
     elseif( heuristicString == "MRV") then
@@ -71,7 +71,7 @@ program.checkProps = function( e, overlapping )
         local periodicInput = (string.lower(e.props["periodicInput"] or "true") == "true") 
         local symmetry = tonumber(e.props["symmetry"] or 8) 
         local ground = string.lower(e.props["ground"] or "false") == "true"
-        model = OverlappingModel.new( e.props["name"], N, 512, 512, periodicInput, periodic, symmetry, ground, heuristic )
+        model = OverlappingModel.new( e.props["name"], N, width, height, periodicInput, periodic, symmetry, ground, heuristic )
     else 
         local subset = e.props["subset"]
         local blackBackground = (string.lower(e.props["blackBackground"] or "false") == "true") 

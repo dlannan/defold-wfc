@@ -76,6 +76,7 @@ end
 
 local function startSim(self)
 	self.selected_model = 1
+	self.selected_sample = 1
 	self.model_width = DEFAULT_WIDTH
 	self.model_height = DEFAULT_HEIGHT
 	self.model_periodic = DEFAULT_PERIODIC
@@ -83,6 +84,9 @@ local function startSim(self)
 
 	self.model_heuristic = 1
 	self.selected_sample = 1
+
+	self.model_name = "Chess"
+	self.model_subset_name = ""
 end
 
 --------------------------------------------------------------------------------
@@ -169,7 +173,7 @@ local function update_tab1(self)
 
 	imgui.text_colored(" Choose Model Type: ", 1, 1, 0, 1 )
 
-	local changed, modeltype = imgui.combo("##modeltype", self.selected_model or 1, MODEL)
+	local changed, modeltype = imgui.combo("##modeltype", self.selected_model, MODEL)
 	if changed then
 		self.selected_model = modeltype
 	end
@@ -178,20 +182,37 @@ local function update_tab1(self)
 	
 	-- If simple tiled model set params 
 	if(self.selected_model == 1) then 
+
+		local v = SAMPLES_RUNNABLES[ self.selected_sample ]
+		pprint(v)
+		self.model_name			= v.e.props[ "name" ]
+		self.model_size         = tonumber(v.e.props[ "size" ] or dim) 
+		self.model_width        = tonumber(v.e.props[ "width" ] or size) 
+		self.model_height       = tonumber(v.e.props[ "height" ] or size)
+		self.model_periodic     = (string.lower(v.e.props[ "periodic" ] or "false") == "true")
+		local heuristicString   = v.e.props[ "heuristic" ]
+		if(heuristicString == "Entropy") then 
+			self.model_heuristic = 1
+		elseif(heuristicString == "MRV") then 
+			self.model_heuristic = 2
+		elseif(heuristicString == "Scanline") then 
+			self.model_heuristic = 3
+		end
+		
 		textColorLabel(" Name: ")
-		changed, newname = imgui.input_text("##name", self.model_name or "Sample 1")
+		changed, newname = imgui.input_text("##name", self.model_name)
 		if(changed) then self.model_name = newname end
 
 		textColorLabel(" Subset Name: ")
-		changed, newname = imgui.input_text("##subsetname ", self.model_subset_name or "Subset Sample 1")
+		changed, newname = imgui.input_text("##subsetname ", self.model_subset_name)
 		if(changed) then self.model_subset_name = newname end
 
 		textColorLabel(" Width: ")
-		changed, w = imgui.input_int( "##width", self.model_width or DEFAULT_WIDTH )
+		changed, w = imgui.input_int( "##width", self.model_width )
 		if changed then self.model_width = w end
 
 		textColorLabel(" Height: ")
-		changed, h = imgui.input_int( "##height", self.model_height or DEFAULT_HEIGHT )
+		changed, h = imgui.input_int( "##height", self.model_height )
 		if changed then self.model_height = h end 
 
 		textColorLabel(" Periodic: ")
@@ -299,7 +320,7 @@ end
 function update(self, dt)
 
 	imgui.set_next_window_pos( 5, 5 )
-	imgui.set_next_window_size(320 * WINDOW_SCALE, 630 * WINDOW_SCALE)
+	imgui.set_next_window_size(315 * WINDOW_SCALE, 635 * WINDOW_SCALE)
 	
 	local flags = imgui.WINDOWFLAGS_NOMOVE
 	flags = bit.bor( flags, imgui.WINDOWFLAGS_NORESIZE )
@@ -329,7 +350,6 @@ function update(self, dt)
 	if changed then
 		self.selected_sample = sample
 		local v = SAMPLES_RUNNABLES[ self.selected_sample ]
-		pprint(v)
 		if(v) then 
 			if(v.overlap == true) then
 				self.selected_model = 2
@@ -394,8 +414,8 @@ function update(self, dt)
 		resource.set_texture(self.resource_path, self.header, self.buffer_info.buffer)
 	end
 		
-	imgui.set_next_window_pos( 330 * WINDOW_SCALE, 5 )
-	imgui.set_next_window_size(625 * WINDOW_SCALE, 630 * WINDOW_SCALE)
+	imgui.set_next_window_pos( 320 * WINDOW_SCALE, 5 )
+	imgui.set_next_window_size(635 * WINDOW_SCALE, 635 * WINDOW_SCALE)
 
 	local flags = imgui.WINDOWFLAGS_NOMOVE
 	flags = bit.bor( flags, imgui.WINDOWFLAGS_NORESIZE )
@@ -404,7 +424,7 @@ function update(self, dt)
 	imgui.begin_window("Generation 1", true, flags)
 	local img_data = buffer.get_bytes(self.buffer_info.buffer, hash("rgba"))
 	local img = imgui.image_load_rawdata( "image1", self.buffer_info.width, self.buffer_info.height, img_data )
-	imgui.image_add(img, 604 * WINDOW_SCALE, 604 * WINDOW_SCALE)
+	imgui.image_add(img, 625 * WINDOW_SCALE, 625 * WINDOW_SCALE)
 
 -- 	local clicked = imgui.is_item_clicked(0)
 -- 	if(clicked == true) then 
