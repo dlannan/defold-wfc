@@ -27,15 +27,20 @@ local function drawBuffer( self )
 	if(self.image_select == nil) then return end 
 
 	local finfo = self.totalfiles[self.image_select]
-	drawpixels.fill(self.buffer_info, 255, 255, 255, 255)
+	if(finfo) then 
+		drawpixels.fill(self.buffer_info, 255, 255, 255, 255)
 
-	self.stream = buffer.get_stream(self.buffer_info.buffer, hash("rgba"))
+		self.stream = buffer.get_stream(self.buffer_info.buffer, hash("rgba"))
 
-	local w, h, c, data = libwfc.image_get( finfo.id )
-	for i = 1, w * h * 4 do
-		self.stream[i] = string.byte(data, i)
+		local w, h, c, data = libwfc.image_get( finfo.id )
+		for i = 1, w * h * 4 do
+			self.stream[i] = string.byte(data, i)
+		end
+		resource.set_texture(self.resource_path, self.header, self.buffer_info.buffer)
+	else
+		self.totalfiles[self.image_select] = nil
+		self.image_select = nil 
 	end
-	resource.set_texture(self.resource_path, self.header, self.buffer_info.buffer)
 end 
 
 --------------------------------------------------------------------------------
@@ -45,9 +50,11 @@ local function runNext(self)
 	local v = SAMPLES_RUNNABLES[ self.selected_sample ]
 	if(v) then 
 		program.checkProps( self, v.e, v.overlap )
-		self.image_select = self.image_select or 1
-		drawBuffer(self)
-	end
+		if( self.running_model) then 
+			self.image_select = self.image_select or 1
+			drawBuffer(self)
+		end
+	end 
 end 
 
 --------------------------------------------------------------------------------
@@ -166,6 +173,10 @@ local function getSampleParams( self)
 
 	self.model_subset 			= v.e.props["subset"] or ""
 	self.model_blackBaground 		= (string.lower(v.e.props["blackBackground"] or "false") == "true") 
+
+	-- Always reset this
+	OverlappingModel.png_path = nil
+	if( v.e.props["src"] ) then OverlappingModel.png_path = v.e.props["src"] end
 end
 
 --------------------------------------------------------------------------------

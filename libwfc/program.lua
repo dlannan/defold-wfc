@@ -72,6 +72,7 @@ program.checkProps = function( gui, e, overlapping )
         model = SimpleTiledModel.new( name, subset, width, height, periodic, blackBackground, heuristic )
     end
 
+    gui.running_model = model
     if(model) then 
         runModel(model,  e)
         for k,v in pairs( model.genfiles ) do

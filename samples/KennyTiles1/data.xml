@@ -1,0 +1,22 @@
+<set size="8">
+	<tiles>
+		<tile name="tile_0018" symmetry="X"/>
+		<tile name="tile_0000" symmetry="L"/>
+		<tile name="tile_0001" symmetry="X"/>
+		<tile name="tile_0002" symmetry="X"/>
+		<tile name="tile_0003" symmetry="L"/>
+	</tiles>
+	<neighbors>
+		<neighbor left="tile_0018" right="tile_0000"/>
+		<neighbor left="tile_0018" right="tile_0001"/>
+		<neighbor left="tile_0018" right="tile_0002"/>
+		<neighbor left="tile_0018" right="tile_0003"/>
+
+		<neighbor left="tile_0000" right="tile_0003"/>
+		<neighbor left="tile_0001" right="tile_0002"/>
+		<neighbor left="tile_0002" right="tile_0001"/>
+		<neighbor left="tile_0003" right="tile_0001"/>
+		<neighbor left="tile_0002" right="tile_0003"/>
+		<neighbor left="tile_0000" right="tile_0001"/>
+	</neighbors>
+</set>

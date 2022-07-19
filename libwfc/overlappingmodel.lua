@@ -18,8 +18,12 @@ OverlappingModel.new = function( name, N, width, height, periodicInput, periodic
     tmodel.ground   = ground 
 
     pprint(name)
+
+    local png_path  = 'samples/'..name
+    if(OverlappingModel.png_path) then png_path = OverlappingModel.png_path end
     
-    local bitmapId  = libwfc.image_load('samples/'..name..'.png')
+    local bitmapId  = libwfc.image_load(png_path..'.png')
+    if(bitmapId == nil) then print("[ERROR] Cannot load: "..png_path..'.png'); return nil end
     local w, h, comp, data = libwfc.image_get(bitmapId)
     local bitmap    = { id=bitmapId, Width = w, Height = h, Comp = comp, data = data }
     local SX        = bitmap.Width
