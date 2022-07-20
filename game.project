@@ -21,3 +21,8 @@ dependencies#1 = https://github.com/dlannan/extension-imgui/archive/master.zip
 
 [input]
 game_binding = /imgui/bindings/imgui.input_bindingc
+
+[graphics]
+default_texture_min_filter = nearest
+default_texture_mag_filter = nearest
+

@@ -76,7 +76,7 @@ program.checkProps = function( gui, e, overlapping )
     if(model) then 
         runModel(model,  e)
         for k,v in pairs( model.genfiles ) do
-            local newid = libwfc.image_loadsize( v, 512, 512 )
+            local newid = imgui.image_load( v )
             table.insert( gui.totalfiles, { filename = v, id = newid } )
         end 
     end

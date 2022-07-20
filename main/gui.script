@@ -1,5 +1,8 @@
+require("libwfc.xmlsimple")
+
 local tinsert = table.insert
 local program = require("libwfc.program") 
+local xdocument = newParser()
 
 --------------------------------------------------------------------------------
 
@@ -52,7 +55,7 @@ local function runNext(self)
 		program.checkProps( self, v.e, v.overlap )
 		if( self.running_model) then 
 			self.image_select = self.image_select or 1
-			drawBuffer(self)
+			-- drawBuffer(self)
 		end
 	end 
 end 
@@ -126,6 +129,8 @@ local function startSim(self)
 	self.totalfiles			= {}
 
 	self.image_select 		= nil
+
+	self.image_tiles 		= {}
 end
 
 --------------------------------------------------------------------------------
@@ -202,7 +207,12 @@ function init(self)
 		width = width, height = height,	channels = channels
 	}
 
-	self.header = {width = width, height = height, type = resource.TEXTURE_TYPE_2D, format = resource.TEXTURE_FORMAT_RGBA, num_mip_maps = 1}
+	self.header = {
+		width 			= width, height = height, 
+		type 			= resource.TEXTURE_TYPE_2D, 
+		format 			= resource.TEXTURE_FORMAT_RGBA, 
+		num_mip_maps 	= 1
+	}
 
 	drawpixels.fill(self.buffer_info, 255, 255, 0, 255)
 	resource.set_texture(self.resource_path, self.header, self.buffer_info.buffer)
@@ -244,6 +254,62 @@ function init(self)
 end
 
 --------------------------------------------------------------------------------
+
+local function tilemapNeighborMaker(self)
+
+	if( self.model_name and self.image_tiles[self.model_name] == nil) then 
+		self.image_tiles[self.model_name] = {}
+		local xroot = xdocument:loadFile( SimpleTiledModel.base_path..self.model_name.."/data.xml")
+		if(xroot) then 
+			xroot = xroot:children()[1]
+			local sprops = xroot:properties()
+			xmlElementFilter( xroot, "tiles", function( tiles )
+				xmlElementFilter( tiles.element, "tile", function( etile )
+					local tilename = etile.props["name"]
+					local filename = "samples/" .. self.model_name.."/"..tilename..".png"
+					local bitmapid = imgui.image_load( filename )
+					tinsert( self.image_tiles[self.model_name], bitmapid)
+				end)
+			end)
+		end 
+	end
+	
+	imgui.set_next_window_pos( 5, 265 * WINDOW_SCALE )
+	imgui.set_next_window_size( 140 * WINDOW_SCALE, 373.5 * WINDOW_SCALE)
+
+	local flags = imgui.WINDOWFLAGS_NOMOVE
+	flags = bit.bor( flags, imgui.WINDOWFLAGS_NORESIZE )
+	flags = bit.bor( flags, imgui.WINDOWFLAGS_NOCOLLAPSE )
+	flags = bit.bor( flags, imgui.WINDOWFLAGS_NODECORATION )
+	flags = bit.bor( flags, imgui.WINDOWFLAGS_ALWAYSVERTICALSCROLLBAR )
+	imgui.begin_window("Load Tiles", false, flags)
+
+-- 	imgui.draw_rect_filled( 15, 265 * WINDOW_SCALE , 140 * WINDOW_SCALE, 455 * WINDOW_SCALE, 0xffff0000 )
+-- 
+	if( self.model_name and self.image_tiles[self.model_name]) then 
+		for k,v in ipairs(self.image_tiles[self.model_name]) do
+			imgui.image_add(v, 125 * WINDOW_SCALE, 125 * WINDOW_SCALE)
+		end
+	end
+
+	imgui.end_window()
+
+	imgui.set_next_window_pos( 1 + 145 * WINDOW_SCALE, 265 * WINDOW_SCALE )
+	imgui.set_next_window_size(173 * WINDOW_SCALE, 373.5 * WINDOW_SCALE)
+
+	local flags = imgui.WINDOWFLAGS_NOMOVE
+	flags = bit.bor( flags, imgui.WINDOWFLAGS_NORESIZE )
+	flags = bit.bor( flags, imgui.WINDOWFLAGS_NOCOLLAPSE )
+	flags = bit.bor( flags, imgui.WINDOWFLAGS_NODECORATION )
+	imgui.begin_window("Arrange Tiles", false, flags)
+
+	imgui.draw_rect_filled( 18 + 145 * WINDOW_SCALE, 265 * WINDOW_SCALE, 140 * WINDOW_SCALE, 355 * WINDOW_SCALE, 0xff00ff00 )
+
+	imgui.end_window()
+end
+
+--------------------------------------------------------------------------------
+
 local function textColorLabel( txt )
 	imgui.text_colored(txt,  0.48, 0.72, 0.89, 1 ); imgui.same_line(LINECOL)
 end 
@@ -255,7 +321,7 @@ local function update_tab1(self)
 	flags = bit.bor( flags, imgui.WINDOWFLAGS_NOCOLLAPSE )
 	flags = bit.bor( flags, imgui.WINDOWFLAGS_HORIZONTALSCROLLBAR )
 	
-	imgui.begin_child("", 0, 0, false, flags)
+	imgui.begin_child("", 0, 260 * WINDOW_SCALE , false, flags)
 
 	imgui.text_colored(" Choose Model Type: ", 1, 1, 0, 1 )
 
@@ -298,7 +364,6 @@ local function update_tab1(self)
 		textColorLabel(" Black Background: ")
 		changed, b = imgui.checkbox( "##blackbg", self.black_background )
 		if changed then self.black_background = b end 
-
 	end 
 	-- If overlapped model set params
 	if(self.selected_model == 2) then 
@@ -373,7 +438,9 @@ end
 function update(self, dt)
 
 	imgui.set_next_window_pos( 5, 5 )
-	imgui.set_next_window_size(315 * WINDOW_SCALE, 635 * WINDOW_SCALE)
+	local lefty = 635
+	if(self.selected_model == 1) then lefty = 260 end
+	imgui.set_next_window_size(315 * WINDOW_SCALE, lefty * WINDOW_SCALE)
 	
 	local flags = imgui.WINDOWFLAGS_NOMOVE
 	flags = bit.bor( flags, imgui.WINDOWFLAGS_NORESIZE )
@@ -444,16 +511,19 @@ function update(self, dt)
 	flags = bit.bor( flags, imgui.WINDOWFLAGS_NOCOLLAPSE )
 	flags = bit.bor( flags, imgui.WINDOWFLAGS_NODECORATION )
 	imgui.begin_window("Generation 1", true, flags)
-	local img_data = buffer.get_bytes(self.buffer_info.buffer, hash("rgba"))
-	local img = imgui.image_load_rawdata( "image1", self.buffer_info.width, self.buffer_info.height, img_data )
-	imgui.image_add(img, 625 * WINDOW_SCALE, 625 * WINDOW_SCALE)
+	-- local img_data = buffer.get_bytes(self.buffer_info.buffer, hash("rgba"))
+	-- local img = imgui.image_load_rawdata( "image1", self.buffer_info.width, self.buffer_info.height, img_data )
+	if(self.image_select and self.totalfiles[self.image_select]) then
+		local finfo = self.totalfiles[self.image_select]
+		imgui.image_add(finfo.id, 625 * WINDOW_SCALE, 625 * WINDOW_SCALE)
+	end
 
 	imgui.draw_rect_filled( 320 * WINDOW_SCALE + 8, 10, 635 * WINDOW_SCALE, 30, 0xff000000 )
 	imgui.set_cursor_pos( 10, 10 )
 	if imgui.button(" < ") and self.image_select then
 		self.image_select = self.image_select - 1 
 		if(self.image_select < 1) then self.image_select = table.count(self.totalfiles) end
-		drawBuffer(self)
+		-- drawBuffer(self)
 	end
 	imgui.same_line(35)
 	imgui.text_colored(string.format(" %03d ", self.image_select or 0), 0.9, 0.9, 0.9, 1 )
@@ -461,7 +531,7 @@ function update(self, dt)
 	if imgui.button(" > ") and self.image_select then
 		self.image_select = self.image_select + 1 
 		if(self.image_select > table.count(self.totalfiles)) then self.image_select = 1 end
-		drawBuffer(self)
+		-- drawBuffer(self)
 	end
 	imgui.same_line(270)
 
@@ -469,6 +539,10 @@ function update(self, dt)
 	if(self.image_select) then fname = self.totalfiles[self.image_select].filename end 
 	imgui.text_colored(fname, 0.9, 0.9, 0.9, 1 )
 	imgui.end_window()
+
+	if(self.selected_model == 1) then 
+		tilemapNeighborMaker(self)	
+	end
 end
 
 --------------------------------------------------------------------------------
